@@ -128,15 +128,14 @@ VISIT_LEVEL_LOW = [
     'wisata petik apel mandiri', 'desa wisata punten', 'lumbung stroberi'
 ]
 
-VALID_TIME_RANGES = [
-    f'{i} jam lalu' for i in range(1, 24)
-] + [
-    'hari ini', f'{i} hari lalu' for i in range(1, 7)
-] + [
-    'seminggu lalu', f'{i} minggu lalu' for i in range(1, 5)
-] + [
-    f'{i} bulan lalu' for i in range(1, 13)
-] + ['1 tahun lalu']
+VALID_TIME_RANGES = (
+    [f'{i} jam lalu' for i in range(1, 24)]
+    + ['hari ini'] + [f'{i} hari lalu' for i in range(1, 7)]
+    + ['seminggu lalu'] + [f'{i} minggu lalu' for i in range(1, 5)]
+    + [f'{i} bulan lalu' for i in range(1, 13)]
+    + ['1 tahun lalu']
+)
+
 
 def get_visit_level(wisata_name):
     """Determine visit level for a wisata"""
