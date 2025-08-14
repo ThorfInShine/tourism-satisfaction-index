@@ -59,3 +59,4 @@ jobs:
           echo "✅ Nginx reloaded"
           
           echo "🎉 Deployment completed successfully!"
+          
