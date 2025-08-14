@@ -1,0 +1,61 @@
+name: Auto Deploy to Hostinger
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        script: |
+          echo "🚀 Starting deployment..."
+          
+          # Navigate to project directory
+          cd /var/www/html/batas.bpskotabatu.com
+          
+          # Backup current data
+          if [ -f "data/combined_batu_tourism_reviews_cleaned.csv" ]; then
+            sudo cp data/combined_batu_tourism_reviews_cleaned.csv data/backups/backup_$(date +%Y%m%d_%H%M%S).csv
+            echo "✅ Data backed up"
+          fi
+          
+          # Pull latest code
+          sudo git fetch origin
+          sudo git reset --hard origin/main
+          echo "✅ Code updated"
+          
+          # Install/update dependencies
+          sudo -u www-data /var/www/html/batas.bpskotabatu.com/venv/bin/pip install -r requirements.txt
+          echo "✅ Dependencies updated"
+          
+          # Set permissions
+          sudo chown -R www-data:www-data /var/www/html/batas.bpskotabatu.com
+          sudo chmod -R 755 /var/www/html/batas.bpskotabatu.com
+          echo "✅ Permissions set"
+          
+          # Restart application
+          sudo supervisorctl restart batas-app
+          echo "✅ Application restarted"
+          
+          # Test Nginx configuration
+          sudo nginx -t && sudo systemctl reload nginx
+          echo "✅ Nginx reloaded"
+          
+          echo "🎉 Deployment completed successfully!"
