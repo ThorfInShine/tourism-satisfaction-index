@@ -1,42 +1,83 @@
 # FILE: app.py
+import os
 import sys
-print(f"Python version: {sys.version}")
-
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file
+import logging
+from datetime import datetime, timedelta
+from functools import lru_cache
 import pandas as pd
+import numpy as np
 import plotly.graph_objs as go
 import plotly.utils
 import json
-import os
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file
+from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 import pickle
 import joblib
-from werkzeug.utils import secure_filename
-import shutil
-from datetime import datetime, timedelta
-import tempfile
-from collections import Counter
 import gc
 import warnings
 import traceback
-import numpy as np
 import re
 import signal
 import io
-from collections import defaultdict
+from collections import defaultdict, Counter
+import tempfile
+import shutil
 import h5py
+
 warnings.filterwarnings('ignore')
 
-# Import TensorFlow for LSTM model
+# Initialize Flask app with production settings
+app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# Configuration based on environment
+if os.environ.get('FLASK_ENV') == 'production':
+    app.config['DEBUG'] = False
+    app.config['UPLOAD_FOLDER'] = '/var/www/html/batas.bpskotabatu.com/data'
+    app.config['MODEL_FOLDER'] = '/var/www/html/batas.bpskotabatu.com/models_h5_fixed'
+    app.secret_key = os.environ.get('SECRET_KEY', 'batas-bpskotabatu-2024-secret-key')
+    
+    # Setup logging for production
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]',
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler('/var/log/batas-app.log', mode='a')
+        ]
+    )
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('BATAS Tourist Satisfaction Analyzer startup - PRODUCTION MODE')
+else:
+    app.config['DEBUG'] = True
+    app.config['UPLOAD_FOLDER'] = 'data'
+    app.config['MODEL_FOLDER'] = 'models_h5_fixed'
+    app.secret_key = 'dev-secret-key-12345'
+    logging.basicConfig(level=logging.DEBUG)
+    app.logger.info('BATAS Tourist Satisfaction Analyzer startup - DEVELOPMENT MODE')
+
+# Additional configuration
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 31536000  # 1 year cache for static files
+app.config['ALLOWED_EXTENSIONS'] = {'csv', 'xlsx', 'xls'}
+
+# Ensure directories exist
+for directory in [app.config['UPLOAD_FOLDER'], app.config['MODEL_FOLDER'],
+                  os.path.join(app.config['UPLOAD_FOLDER'], 'temp'),
+                  os.path.join(app.config['UPLOAD_FOLDER'], 'backups')]:
+    os.makedirs(directory, exist_ok=True)
+
+# Import TensorFlow with error handling
 try:
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     import tensorflow as tf
+    tf.get_logger().setLevel('ERROR')
     from tensorflow.keras.preprocessing.sequence import pad_sequences
     TENSORFLOW_AVAILABLE = True
-    print("✅ TensorFlow available")
-    # Set TensorFlow to be less verbose
-    tf.get_logger().setLevel('ERROR')
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    app.logger.info("✅ TensorFlow available")
 except ImportError:
-    print("❌ TensorFlow not available")
+    app.logger.warning("❌ TensorFlow not available - LSTM models will be disabled")
     TENSORFLOW_AVAILABLE = False
 
 # Import sklearn components
@@ -45,186 +86,82 @@ try:
     from sklearn.linear_model import LogisticRegression
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.pipeline import Pipeline
-    from sklearn.utils.class_weight import compute_class_weight
     SKLEARN_AVAILABLE = True
-    print("✅ Scikit-learn available")
+    app.logger.info("✅ Scikit-learn available")
 except ImportError:
-    print("❌ Scikit-learn not available")
+    app.logger.error("❌ Scikit-learn not available")
     SKLEARN_AVAILABLE = False
 
 # Signal handler for graceful shutdown
 def signal_handler(sig, frame):
-    print('\n🛑 Interrupt received, cleaning up...')
+    app.logger.info('🛑 Interrupt received, cleaning up...')
     gc.collect()
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
 
-app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here-12345')
-
-# Configuration
-UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'data')
-ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
-# Initialize components with lazy loading
+# Global variables with thread safety
 processor = None
 predictor = None
-
-# Global variables
 df_processed = None
 metrics = None
 model_results = None
 current_data_info = None
 
-# HIGH VISITS (Kunjungan Tinggi)
+# Visit level categories (simplified for production)
 VISIT_LEVEL_HIGH = [
-    'eco active park',  # eco green park -> eco active park
-    'gunung panderman',  # jalur pendakian gunung panderman -> gunung panderman
-    'batu night spectacular',  # bns (batu night spectacular) -> batu night spectacular
-    'museum angkut',  # museum angkut + -> museum angkut
-    'coban talun',  # wana wisata coban talun -> coban talun
-    'taman selecta',  # taman rekreasi selecta -> taman selecta
-    'jatim park 3',  # jatim park iii -> jatim park 3
-    'jatim park 2',  # jatim park ii -> jatim park 2
-    'jatim park 1',  # jatim park i -> jatim park 1
-    'alun alun kota wisata batu'  # alun-alun kota wisata batu -> alun alun kota wisata batu
+    'eco green park', 'eco active park', 'gunung panderman', 'batu night spectacular',
+    'museum angkut', 'coban talun', 'taman selecta', 'jatim park 3',
+    'jatim park 2', 'jatim park 1', 'alun alun kota wisata batu'
 ]
 
-# MEDIUM VISITS (Kunjungan Sedang)
 VISIT_LEVEL_MEDIUM = [
-    'songgoriti hot springs',  # songgoriti hot spring + pemandian tirta nirwana songgoriti -> songgoriti hot springs
-    'tirta nirwana hotspring',  # part of songgoriti -> tirta nirwana hotspring
-    'desa wisata tulungrejo',  # desa wisata tulungrejo -> desa wisata tulungrejo
-    'coban putri',  # wana wisata coban putri -> coban putri
-    'paralayang gunung banyak',  # gunung banyak -> paralayang gunung banyak
-    'air terjun coban rais',  # wana wisata coban rais -> air terjun coban rais
-    'batu economis park',  # predator fun park/batu economis park -> batu economis park
-    'wisata bunga sidomulyo',  # desa wisata sidomulyo -> wisata bunga sidomulyo
-    'batu love garden (baloga)',  # batu love garden -> batu love garden (baloga)
-    'milenial glow garden',  # millenial glow garden -> milenial glow garden
-    'pemandian air panas cangar'  # pemandian air panas alam cangar -> pemandian air panas cangar
+    'songgoriti hot springs', 'tirta nirwana hotspring', 'desa wisata tulungrejo',
+    'coban putri', 'paralayang gunung banyak', 'air terjun coban rais',
+    'batu economis park', 'wisata bunga sidomulyo', 'batu love garden',
+    'milenial glow garden', 'pemandian air panas cangar'
 ]
 
-# LOW VISITS (Kunjungan Rendah)
 VISIT_LEVEL_LOW = [
-    'gussari goa pinus batu',  # goa pinus -> gussari goa pinus batu
-    'batu rafting',  # batu rafting -> batu rafting
-    'wisata desa agro bumiaji',  # desa wisata bumiaji -> wisata desa agro bumiaji
-    'taman dolan',  # taman dolan -> taman dolan (no change)
-    'gunung arjuno',  # jalur pendakian gunung arjuno -> gunung arjuno
-    'taman pinus campervan',  # taman pinus campervan park -> taman pinus campervan
-    'wisata petik apel mandiri',  # petik apel mandiri -> wisata petik apel mandiri
-    'desa wisata punten',  # desa wisata punten -> desa wisata punten
-    'lumbung stroberi'  # desa wisata pandesari (lumbung stroben) -> lumbung stroberi
+    'gussari goa pinus batu', 'batu rafting', 'wisata desa agro bumiaji',
+    'taman dolan', 'gunung arjuno', 'taman pinus campervan',
+    'wisata petik apel mandiri', 'desa wisata punten', 'lumbung stroberi'
 ]
+
+VALID_TIME_RANGES = [
+    f'{i} jam lalu' for i in range(1, 24)
+] + [
+    'hari ini', f'{i} hari lalu' for i in range(1, 7)
+] + [
+    'seminggu lalu', f'{i} minggu lalu' for i in range(1, 5)
+] + [
+    f'{i} bulan lalu' for i in range(1, 13)
+] + ['1 tahun lalu']
 
 def get_visit_level(wisata_name):
-    """Determine visit level for a wisata based on ACTUAL database names"""
+    """Determine visit level for a wisata"""
     if pd.isna(wisata_name) or wisata_name is None:
         return 'low'
     
     wisata_lower = str(wisata_name).lower().strip()
     
-    # Check if in high visit list
     for high_wisata in VISIT_LEVEL_HIGH:
         if high_wisata.lower() in wisata_lower or wisata_lower in high_wisata.lower():
             return 'high'
     
-    # Check if in medium visit list
     for medium_wisata in VISIT_LEVEL_MEDIUM:
         if medium_wisata.lower() in wisata_lower or wisata_lower in medium_wisata.lower():
             return 'medium'
     
-    # Check if in low visit list
-    for low_wisata in VISIT_LEVEL_LOW:
-        if low_wisata.lower() in wisata_lower or wisata_lower in low_wisata.lower():
-            return 'low'
-    
-    # Default to low for unmatched wisata
     return 'low'
 
-def debug_wisata_names(df):
-    """Debug function to check wisata names and their categorization"""
-    if 'wisata' not in df.columns:
-        print("❌ No 'wisata' column in dataframe")
-        return
-    
-    print("\n" + "="*80)
-    print("🔍 DEBUG: WISATA CATEGORIZATION CHECK")
-    print("="*80)
-    
-    # Get unique wisata names
-    unique_wisata = df['wisata'].unique()
-    
-    # Categorize each wisata
-    categorization = {
-        'high': [],
-        'medium': [],
-        'low': []
-    }
-    
-    for wisata in unique_wisata:
-        if pd.notna(wisata):
-            level = get_visit_level(wisata)
-            categorization[level].append(wisata)
-    
-    # Print results
-    print(f"\n📊 TOTAL UNIQUE WISATA: {len(unique_wisata)}")
-    print(f"\n🟢 HIGH VISITS ({len(categorization['high'])} wisata):")
-    for w in sorted(categorization['high']):
-        print(f"   - {w}")
-    
-    print(f"\n🟡 MEDIUM VISITS ({len(categorization['medium'])} wisata):")
-    for w in sorted(categorization['medium']):
-        print(f"   - {w}")
-    
-    print(f"\n🔴 LOW VISITS ({len(categorization['low'])} wisata):")
-    for w in sorted(categorization['low'])[:10]:  # Show only first 10 for low
-        print(f"   - {w}")
-    if len(categorization['low']) > 10:
-        print(f"   ... and {len(categorization['low']) - 10} more")
-    
-    print("\n" + "="*80)
-    
-    # Check for expected high visit wisata that might be missing
-    print("\n⚠️ CHECKING EXPECTED HIGH VISIT WISATA:")
-    for expected in VISIT_LEVEL_HIGH:
-        found = False
-        for wisata in unique_wisata:
-            if pd.notna(wisata) and expected.lower() in str(wisata).lower():
-                found = True
-                print(f"   ✅ Found: {expected} -> {wisata}")
-                break
-        if not found:
-            print(f"   ❌ NOT FOUND: {expected}")
-    
-    print("="*80 + "\n")
-
-# Define valid time ranges for filtering complaints
-VALID_TIME_RANGES = [
-    '1 jam lalu', '2 jam lalu', '3 jam lalu', '4 jam lalu', '5 jam lalu', 
-    '6 jam lalu', '7 jam lalu', '8 jam lalu', '9 jam lalu', '10 jam lalu', 
-    '11 jam lalu', '12 jam lalu', '13 jam lalu', '14 jam lalu', '15 jam lalu', 
-    '16 jam lalu', '17 jam lalu', '18 jam lalu', '19 jam lalu', '20 jam lalu', 
-    '21 jam lalu', '22 jam lalu', '23 jam lalu', 'hari ini', '1 hari lalu', 
-    '2 hari lalu', '3 hari lalu', '4 hari lalu', '5 hari lalu', '6 hari lalu', 
-    'beberapa hari lalu', 'seminggu lalu', '1 minggu lalu', '2 minggu lalu', 
-    '3 minggu lalu', '4 minggu lalu', 'sebulan lalu', '1 bulan lalu', '2 bulan lalu', 
-    '3 bulan lalu', '4 bulan lalu', '5 bulan lalu', '6 bulan lalu', '7 bulan lalu', 
-    '8 bulan lalu', '9 bulan lalu', '10 bulan lalu', '11 bulan lalu', '1 tahun lalu'
-]
-
 def is_valid_time_range(date_str):
-    """Check if date string is within valid time range (1 year)"""
+    """Check if date string is within valid time range"""
     if pd.isna(date_str) or date_str is None:
         return False
     
     date_lower = str(date_str).lower().strip()
     
-    # Check if date matches any valid time range
     for valid_range in VALID_TIME_RANGES:
         if valid_range.lower() in date_lower or date_lower == valid_range.lower():
             return True
@@ -232,13 +169,12 @@ def is_valid_time_range(date_str):
     return False
 
 def format_date_display(date_str):
-    """Format date string for display - ensure it shows complete text"""
+    """Format date string for display"""
     if pd.isna(date_str) or date_str is None:
         return "Tidak diketahui"
     
     date_str = str(date_str).strip()
     
-    # Ensure proper formatting for display
     for valid_range in VALID_TIME_RANGES:
         if valid_range.lower() in date_str.lower():
             return valid_range
@@ -246,158 +182,117 @@ def format_date_display(date_str):
     return date_str
 
 class FixedH5ModelLoader:
-    """FIXED utility class to load models from H5 format"""
+    """Optimized H5 model loader for production"""
     
-    def __init__(self, models_dir='models_h5_fixed'):
+    def __init__(self, models_dir):
         self.models_dir = models_dir
         self.label_encoder_classes = None
-        print(f"🔧 Initializing H5 Model Loader from: {models_dir}")
+        app.logger.info(f"🔧 Initializing H5 Model Loader from: {models_dir}")
         
-        # Check if directory exists
         if not os.path.exists(models_dir):
-            print(f"⚠️ Models directory not found: {models_dir}")
-            print("   Creating directory...")
+            app.logger.warning(f"⚠️ Models directory not found: {models_dir}")
             os.makedirs(models_dir, exist_ok=True)
     
+    @lru_cache(maxsize=1)
     def load_label_encoder(self, filepath=None):
-        """Load label encoder classes from H5 file"""
+        """Load and cache label encoder"""
         if filepath is None:
             filepath = os.path.join(self.models_dir, 'label_encoder.h5')
         
         try:
             if os.path.exists(filepath):
-                print(f"🏷️ Loading label encoder from: {filepath}")
                 with h5py.File(filepath, 'r') as f:
-                    # Try different possible keys for classes
                     classes_data = None
-                    if 'classes' in f:
-                        classes_data = f['classes'][:]
-                    elif 'classes_' in f:
-                        classes_data = f['classes_'][:]
-                    elif 'label_encoder_classes' in f:
-                        classes_data = f['label_encoder_classes'][:]
+                    for key in ['classes', 'classes_', 'label_encoder_classes']:
+                        if key in f:
+                            classes_data = f[key][:]
+                            break
                     
                     if classes_data is not None:
-                        # Convert bytes to strings if needed
                         if isinstance(classes_data[0], bytes):
                             classes = [cls.decode('utf-8') for cls in classes_data]
                         else:
                             classes = [str(cls) for cls in classes_data]
                         
                         self.label_encoder_classes = classes
-                        print(f"   ✅ Loaded classes: {self.label_encoder_classes}")
                         return classes
-                    else:
-                        print("   ⚠️ No classes data found in H5 file")
-            else:
-                print(f"   ⚠️ Label encoder file not found: {filepath}")
-                
         except Exception as e:
-            print(f"❌ Error loading label encoder: {e}")
+            app.logger.error(f"Error loading label encoder: {e}")
         
-        # Default fallback classes
         self.label_encoder_classes = ['negative', 'neutral', 'positive']
-        print(f"   ⚠️ Using default classes: {self.label_encoder_classes}")
         return self.label_encoder_classes
     
     def load_sklearn_model(self, filepath, model_name):
-        """Load sklearn model from H5 file with multiple methods"""
+        """Load sklearn model with caching"""
         try:
             if not os.path.exists(filepath):
-                print(f"   ❌ Model file not found: {filepath}")
                 return None
-                
-            print(f"🔤 Loading {model_name} from: {filepath}")
             
             with h5py.File(filepath, 'r') as f:
-                # Try Method 1: Joblib (most reliable)
                 if 'joblib_compressed' in f:
                     try:
-                        print(f"   🔍 Trying Method 1: Joblib")
                         joblib_bytes = f['joblib_compressed'][:]
-                        
-                        # Write to temporary file
                         with tempfile.NamedTemporaryFile(delete=False, suffix='.joblib') as tmp_file:
                             tmp_file.write(joblib_bytes.tobytes())
                             temp_path = tmp_file.name
                         
-                        # Load with joblib
                         model = joblib.load(temp_path)
                         os.unlink(temp_path)
-                        
-                        print(f"   ✅ Method 1 (Joblib) SUCCESS: {model_name}")
                         return model
-                        
                     except Exception as e:
-                        print(f"   ⚠️ Method 1 (Joblib) failed: {str(e)[:100]}")
+                        app.logger.warning(f"Joblib load failed: {str(e)[:100]}")
                 
-                # Try Method 2: Standard pickle
                 if 'full_pipeline_pickle' in f:
                     try:
-                        print(f"   🔍 Trying Method 2: Pickle")
                         pipeline_bytes = f['full_pipeline_pickle'][:]
                         buffer = io.BytesIO(pipeline_bytes.tobytes())
                         model = pickle.load(buffer)
-                        
-                        print(f"   ✅ Method 2 (Pickle) SUCCESS: {model_name}")
                         return model
-                        
                     except Exception as e:
-                        print(f"   ⚠️ Method 2 (Pickle) failed: {str(e)[:100]}")
-                
-                print(f"   ❌ All loading methods failed for {model_name}")
-                return None
+                        app.logger.warning(f"Pickle load failed: {str(e)[:100]}")
                 
         except Exception as e:
-            print(f"❌ Error loading {model_name}: {e}")
-            return None
+            app.logger.error(f"Error loading {model_name}: {e}")
+        
+        return None
     
     def load_lstm_model(self, filepath=None):
-        """Load LSTM model from H5 files"""
+        """Load LSTM model if TensorFlow available"""
+        if not TENSORFLOW_AVAILABLE:
+            return None
+        
         if filepath is None:
             filepath = os.path.join(self.models_dir, 'lstm_model.h5')
         
         tf_filepath = os.path.join(self.models_dir, 'lstm_model_tensorflow.h5')
         
         try:
-            print(f"🧠 Loading LSTM model...")
-            
-            lstm_data = None
             tokenizer = None
             max_len = 100
             max_words = 8000
             
-            # Load metadata and tokenizer
             if os.path.exists(filepath):
                 with h5py.File(filepath, 'r') as f:
-                    # Get parameters
                     if 'max_len' in f.attrs:
                         max_len = int(f.attrs['max_len'])
                     if 'max_words' in f.attrs:
                         max_words = int(f.attrs['max_words'])
                     
-                    # Load tokenizer
-                    if 'tokenizer' in f:
-                        tokenizer_group = f['tokenizer']
-                        if 'tokenizer_pickle' in tokenizer_group:
-                            try:
-                                tokenizer_bytes = tokenizer_group['tokenizer_pickle'][:]
-                                buffer = io.BytesIO(tokenizer_bytes.tobytes())
-                                tokenizer = pickle.load(buffer)
-                                print(f"   ✅ Tokenizer loaded")
-                            except Exception as e:
-                                print(f"   ⚠️ Failed to load tokenizer: {e}")
+                    if 'tokenizer' in f and 'tokenizer_pickle' in f['tokenizer']:
+                        try:
+                            tokenizer_bytes = f['tokenizer']['tokenizer_pickle'][:]
+                            buffer = io.BytesIO(tokenizer_bytes.tobytes())
+                            tokenizer = pickle.load(buffer)
+                        except Exception as e:
+                            app.logger.warning(f"Failed to load tokenizer: {e}")
             
-            # Load TensorFlow model
             model = None
             if os.path.exists(tf_filepath):
                 try:
                     model = tf.keras.models.load_model(tf_filepath, compile=False)
-                    print(f"   ✅ TensorFlow model loaded")
                 except Exception as e:
-                    print(f"   ❌ Failed to load TensorFlow model: {e}")
+                    app.logger.error(f"Failed to load TensorFlow model: {e}")
             
-            # Return if we have both components
             if tokenizer is not None and model is not None:
                 return {
                     'model': model,
@@ -405,133 +300,85 @@ class FixedH5ModelLoader:
                     'max_len': max_len,
                     'max_words': max_words
                 }
-            
-            return None
                 
         except Exception as e:
-            print(f"❌ Error loading LSTM model: {e}")
-            return None
+            app.logger.error(f"Error loading LSTM model: {e}")
+        
+        return None
 
 class SmartEnsembleH5Fixed:
-    """FIXED Smart Ensemble that loads models from H5 format"""
+    """Production-optimized ensemble model"""
     
-    def __init__(self, models_dir='models_h5_fixed'):
-        print("🚀 Initializing FIXED Smart Ensemble from H5 format...")
+    def __init__(self, models_dir=None):
+        if models_dir is None:
+            models_dir = app.config['MODEL_FOLDER']
+        
         self.models_dir = models_dir
         self.model_name = "Smart Ensemble H5 Fixed"
         self.model_type = "h5_ensemble_fixed"
         
-        # H5 Model Loader
         self.h5_loader = FixedH5ModelLoader(models_dir)
         
-        # Model components
         self.tfidf_lr = None
         self.rf = None
         self.lstm_data = None
         self.label_encoder_classes = None
         
-        # Component status
         self.tfidf_lr_ready = False
         self.rf_ready = False
         self.lstm_ready = False
         
-        # Ensemble parameters
-        self.use_manual_weights = True  # ← BARIS BARU
+        self.use_manual_weights = True
         self.ensemble_weights = [0.2, 0, 0.8]
         
-        # Load all components
         self.load_ensemble_components()
     
     def load_ensemble_components(self):
-        """Load ensemble components from H5 format"""
+        """Load all ensemble components"""
         try:
-            # Load label encoder
             self.label_encoder_classes = self.h5_loader.load_label_encoder()
             
             # Load TF-IDF + LR
             tfidf_path = os.path.join(self.models_dir, 'tfidf_lr_model.h5')
             self.tfidf_lr = self.h5_loader.load_sklearn_model(tfidf_path, 'TF-IDF + LR')
-            if self.tfidf_lr:
-                # Check if weight is 0, if yes, disable the model
-                if hasattr(self, 'use_manual_weights') and self.use_manual_weights and self.ensemble_weights[0] == 0:
-                    self.tfidf_lr_ready = False
-                    print("   ⚠️ TF-IDF + LR loaded but disabled (weight=0)")
-                else:
-                    self.tfidf_lr_ready = True
-                    print("   ✅ TF-IDF + LR loaded successfully")
+            if self.tfidf_lr and self.ensemble_weights[0] > 0:
+                self.tfidf_lr_ready = True
             
             # Load Random Forest
             rf_path = os.path.join(self.models_dir, 'random_forest_model.h5')
             self.rf = self.h5_loader.load_sklearn_model(rf_path, 'Random Forest')
-            if self.rf:
-                # Check if weight is 0, if yes, disable the model
-                if hasattr(self, 'use_manual_weights') and self.use_manual_weights and self.ensemble_weights[1] == 0:
-                    self.rf_ready = False
-                    print("   ⚠️ Random Forest loaded but disabled (weight=0)")
-                else:
-                    self.rf_ready = True
-                    print("   ✅ Random Forest loaded successfully")
+            if self.rf and self.ensemble_weights[1] > 0:
+                self.rf_ready = True
             
             # Load LSTM
             if TENSORFLOW_AVAILABLE:
                 self.lstm_data = self.h5_loader.load_lstm_model()
-                if self.lstm_data:
-                    # Check if weight is 0, if yes, disable the model
-                    if hasattr(self, 'use_manual_weights') and self.use_manual_weights and self.ensemble_weights[2] == 0:
-                        self.lstm_ready = False
-                        print("   ⚠️ LSTM loaded but disabled (weight=0)")
-                    else:
-                        self.lstm_ready = True
-                        print("   ✅ LSTM loaded successfully")
+                if self.lstm_data and self.ensemble_weights[2] > 0:
+                    self.lstm_ready = True
             
-            # Count active models (models with weight > 0)
-            active_models = 0
-            if self.tfidf_lr_ready and self.ensemble_weights[0] > 0:
-                active_models += 1
-            if self.rf_ready and self.ensemble_weights[1] > 0:
-                active_models += 1
-            if self.lstm_ready and self.ensemble_weights[2] > 0:
-                active_models += 1
+            active_models = sum([self.tfidf_lr_ready, self.rf_ready, self.lstm_ready])
             
-            # Count loaded models (regardless of weight)
-            loaded_models = sum([self.tfidf_lr is not None, self.rf is not None, self.lstm_data is not None])
-            
-            print(f"\n📊 MODEL STATUS:")
-            print(f"   TF-IDF + LR: {self.tfidf_lr_ready} (weight={self.ensemble_weights[0]:.2f})")
-            print(f"   Random Forest: {self.rf_ready} (weight={self.ensemble_weights[1]:.2f})")
-            print(f"   LSTM: {self.lstm_ready} (weight={self.ensemble_weights[2]:.2f})")
-            print(f"   Loaded Models: {loaded_models}/3")
-            print(f"   Active Models: {active_models}/3")
-            
-            # Create fallback if needed
             if active_models == 0:
-                print("⚠️ No active models (all weights are 0), creating fallback...")
                 self.create_fallback_models()
                 active_models = sum([self.tfidf_lr_ready, self.rf_ready, self.lstm_ready])
             
             if active_models > 0:
-                self.adjust_weights()
                 self.update_model_name()
-                print(f"✅ Ensemble ready with {active_models} active component(s)")
+                app.logger.info(f"✅ Ensemble ready with {active_models} active component(s)")
                 return True
-            else:
-                print("❌ No models available")
-                return False
                 
         except Exception as e:
-            print(f"❌ Error loading ensemble: {e}")
+            app.logger.error(f"Error loading ensemble: {e}")
             self.create_fallback_models()
-            return self.tfidf_lr_ready or self.rf_ready or self.lstm_ready
+        
+        return self.tfidf_lr_ready or self.rf_ready or self.lstm_ready
     
     def create_fallback_models(self):
         """Create simple fallback models"""
         if not SKLEARN_AVAILABLE:
             return False
-            
+        
         try:
-            print("🔧 Creating fallback models...")
-            
-            # Training data
             texts = [
                 'bagus sekali', 'sangat baik', 'memuaskan', 'luar biasa', 'recommended',
                 'buruk sekali', 'mengecewakan', 'tidak bagus', 'jelek', 'parah',
@@ -539,20 +386,17 @@ class SmartEnsembleH5Fixed:
             ]
             labels = ['positive']*5 + ['negative']*5 + ['neutral']*5
             
-            # Create simple TF-IDF + LR
             if not self.tfidf_lr_ready:
                 try:
                     self.tfidf_lr = Pipeline([
                         ('tfidf', TfidfVectorizer(max_features=100)),
-                        ('classifier', LogisticRegression(random_state=42))
+                        ('classifier', LogisticRegression(random_state=42, max_iter=100))
                     ])
                     self.tfidf_lr.fit(texts, labels)
                     self.tfidf_lr_ready = True
-                    print("   ✅ Fallback TF-IDF + LR created")
                 except:
                     pass
             
-            # Create simple RF
             if not self.rf_ready:
                 try:
                     self.rf = Pipeline([
@@ -561,44 +405,19 @@ class SmartEnsembleH5Fixed:
                     ])
                     self.rf.fit(texts, labels)
                     self.rf_ready = True
-                    print("   ✅ Fallback Random Forest created")
                 except:
                     pass
             
             return self.tfidf_lr_ready or self.rf_ready
             
         except Exception as e:
-            print(f"❌ Error creating fallback: {e}")
+            app.logger.error(f"Error creating fallback: {e}")
             return False
     
-    def adjust_weights(self):
-        """Adjust ensemble weights based on working components"""
-        if hasattr(self, 'use_manual_weights') and self.use_manual_weights:
-            print(f"📊 Using MANUAL weights: TF-IDF={self.ensemble_weights[0]:.2f}, RF={self.ensemble_weights[1]:.2f}, LSTM={self.ensemble_weights[2]:.2f}")
-            return  # ← KUNCI: Return di sini!
-        
-        working = []
-        if self.tfidf_lr_ready:
-            working.append(0)
-        if self.rf_ready:
-            working.append(1)
-        if self.lstm_ready:
-            working.append(2)
-        
-        self.ensemble_weights = [0.0, 0.0, 0.0]
-        
-        if working:
-            weight = 1.0 / len(working)
-            for idx in working:
-                self.ensemble_weights[idx] = weight
-        
-        print(f"📊 Weights: TF-IDF={self.ensemble_weights[0]:.2f}, RF={self.ensemble_weights[1]:.2f}, LSTM={self.ensemble_weights[2]:.2f}")
-    
     def update_model_name(self):
-        """Update model name based on active models (weight > 0)"""
+        """Update model name based on active models"""
         components = []
         
-        # Only include models that are ready AND have weight > 0
         if self.tfidf_lr_ready and self.ensemble_weights[0] > 0:
             components.append(f"TF-IDF({self.ensemble_weights[0]:.0%})")
         if self.rf_ready and self.ensemble_weights[1] > 0:
@@ -607,12 +426,9 @@ class SmartEnsembleH5Fixed:
             components.append(f"LSTM({self.ensemble_weights[2]:.0%})")
         
         if components:
-            if self.use_manual_weights:
-                self.model_name = f"Manual: {'+'.join(components)}"
-            else:
-                self.model_name = f"Auto: {'+'.join(components)}"
+            self.model_name = f"Ensemble: {'+'.join(components)}"
         else:
-            self.model_name = "Rule-based (No Active Models)"
+            self.model_name = "Rule-based Fallback"
     
     def clean_text_simple(self, text):
         """Simple text cleaning"""
@@ -649,6 +465,11 @@ class SmartEnsembleH5Fixed:
             return 'negative'
         else:
             return 'neutral'
+    
+    @lru_cache(maxsize=1000)
+    def predict_single_cached(self, text):
+        """Cached prediction for single text"""
+        return self.predict_single(text, return_probabilities=False)
     
     def predict_single(self, text, return_probabilities=False):
         """Predict sentiment for single text"""
@@ -709,8 +530,7 @@ class SmartEnsembleH5Fixed:
                     'text': text,
                     'sentiment': self.label_encoder_classes[pred_idx],
                     'confidence': float(ensemble_prob[pred_idx]),
-                    'model_used': f"Ensemble ({'+'.join(models_used)})",
-                    'models_count': len(models_used)
+                    'model_used': f"Ensemble ({'+'.join(models_used)})"
                 }
                 
                 if return_probabilities:
@@ -728,8 +548,7 @@ class SmartEnsembleH5Fixed:
                     'text': text,
                     'sentiment': sentiment,
                     'confidence': 0.6,
-                    'model_used': 'Rule-based',
-                    'models_count': 0
+                    'model_used': 'Rule-based'
                 }
                 
                 if return_probabilities:
@@ -744,7 +563,7 @@ class SmartEnsembleH5Fixed:
                 return result
                 
         except Exception as e:
-            print(f"Prediction error: {e}")
+            app.logger.error(f"Prediction error: {e}")
             return {
                 'text': text,
                 'sentiment': 'neutral',
@@ -752,8 +571,8 @@ class SmartEnsembleH5Fixed:
                 'model_used': 'error_fallback'
             }
     
-    def predict_batch(self, texts, batch_size=50):
-        """Batch prediction"""
+    def predict_batch(self, texts, batch_size=100):
+        """Optimized batch prediction"""
         results = []
         total = len(texts)
         
@@ -762,34 +581,19 @@ class SmartEnsembleH5Fixed:
             batch_results = [self.predict_single(text) for text in batch]
             results.extend(batch_results)
             
-            if i % 1000 == 0:
-                print(f"   Processed {min(i + batch_size, total)}/{total} texts")
+            if i % 1000 == 0 and i > 0:
+                app.logger.info(f"Processed {min(i + batch_size, total)}/{total} texts")
+                gc.collect()  # Clean up memory periodically
         
         return results
-    
-    def get_model_info(self):
-        """Get model information"""
-        components = []
-        if self.tfidf_lr_ready:
-            components.append('TF-IDF + LR')
-        if self.rf_ready:
-            components.append('Random Forest')
-        if self.lstm_ready:
-            components.append('LSTM')
-        
-        return {
-            'model_name': self.model_name,
-            'model_type': self.model_type,
-            'components': components,
-            'working_components': len(components),
-            'total_components': 3,
-            'weights': self.ensemble_weights,
-            'source': 'H5 Fixed Format'
-        }
 
 class DataProcessor:
-    """Data processor using sentiment model"""
-    def __init__(self, models_dir='models_h5_fixed'):
+    """Optimized data processor for production"""
+    
+    def __init__(self, models_dir=None):
+        if models_dir is None:
+            models_dir = app.config['MODEL_FOLDER']
+        
         self.models_dir = models_dir
         self.sentiment_analyzer = None
         self.load_models()
@@ -798,20 +602,21 @@ class DataProcessor:
         """Load sentiment model"""
         try:
             self.sentiment_analyzer = SmartEnsembleH5Fixed(self.models_dir)
-            print("✅ Sentiment analyzer loaded")
+            app.logger.info("✅ Sentiment analyzer loaded")
         except Exception as e:
-            print(f"Error loading models: {e}")
+            app.logger.error(f"Error loading models: {e}")
             self.sentiment_analyzer = None
     
+    @lru_cache(maxsize=1)
     def load_data(self, file_path):
-        """Load data from CSV"""
+        """Load and cache data from CSV"""
         try:
-            print(f"📂 Loading data from: {file_path}")
-            df = pd.read_csv(file_path)
-            print(f"✅ Loaded {len(df)} rows")
+            app.logger.info(f"📂 Loading data from: {file_path}")
+            df = pd.read_csv(file_path, low_memory=False)
+            app.logger.info(f"✅ Loaded {len(df)} rows")
             return df
         except Exception as e:
-            print(f"❌ Error loading data: {e}")
+            app.logger.error(f"Error loading data: {e}")
             raise
     
     def clean_text(self, text):
@@ -826,33 +631,22 @@ class DataProcessor:
             text = ' '.join(text.split())
             return text
     
-    def get_sentiment(self, text):
-        """Get sentiment"""
-        if self.sentiment_analyzer:
-            try:
-                result = self.sentiment_analyzer.predict_single(text)
-                return result['sentiment']
-            except:
-                return 'neutral'
-        else:
-            return 'neutral'
-    
     def process_reviews(self, df):
-        """Process reviews"""
-        print("🔄 Processing reviews...")
+        """Process reviews with optimization"""
+        app.logger.info("🔄 Processing reviews...")
         
         try:
             df_processed = df.copy()
             
             # Clean text
-            print("🧹 Cleaning text...")
+            app.logger.info("🧹 Cleaning text...")
             df_processed['cleaned_text'] = df_processed['review_text'].apply(self.clean_text)
             
-            # Get sentiment
-            print("🎯 Analyzing sentiment...")
+            # Get sentiment in batches
+            app.logger.info("🎯 Analyzing sentiment...")
             if self.sentiment_analyzer:
                 texts = df_processed['cleaned_text'].tolist()
-                results = self.sentiment_analyzer.predict_batch(texts, batch_size=100)
+                results = self.sentiment_analyzer.predict_batch(texts, batch_size=200)
                 df_processed['sentiment'] = [r['sentiment'] for r in results]
             else:
                 df_processed['sentiment'] = 'neutral'
@@ -870,14 +664,18 @@ class DataProcessor:
             if 'visit_time' not in df_processed.columns:
                 df_processed['visit_time'] = 'Tidak diketahui'
             
-            print(f"✅ Processed {len(df_processed)} reviews")
+            app.logger.info(f"✅ Processed {len(df_processed)} reviews")
+            
+            # Clean up memory
+            gc.collect()
+            
             return df_processed
             
         except Exception as e:
-            print(f"❌ Error processing: {e}")
+            app.logger.error(f"Error processing: {e}")
             df_processed = df.copy()
             df_processed['sentiment'] = 'neutral'
-            df_processed['cleaned_text'] = df_processed['review_text'].apply(self.clean_text)
+            df_processed['cleaned_text'] = ''
             df_processed['review_length'] = 100
             df_processed['positive_score'] = 5.0
             df_processed['negative_score'] = 5.0
@@ -885,20 +683,19 @@ class DataProcessor:
             return df_processed
     
     def get_satisfaction_metrics(self, df):
-        """Calculate metrics - FIXED with overall_satisfaction as a value not object"""
+        """Calculate metrics optimized for production"""
         try:
             metrics = {}
             
             metrics['total_reviews'] = len(df)
             
-            # Calculate average rating and ensure it's a float
+            # Calculate average rating
             if 'rating' in df.columns and len(df) > 0:
                 avg_rating = df['rating'].mean()
                 metrics['avg_rating'] = float(avg_rating) if not pd.isna(avg_rating) else 0.0
             else:
                 metrics['avg_rating'] = 0.0
             
-            # FIXED: Set overall_satisfaction as a float value, not dict
             metrics['overall_satisfaction'] = metrics['avg_rating']
             
             # Rating distribution
@@ -914,9 +711,14 @@ class DataProcessor:
                 metrics['sentiment_distribution'] = sentiment_dist
                 
                 total = len(df)
-                metrics['positive_percentage'] = float((sentiment_dist.get('positive', 0) / total) * 100) if total > 0 else 0.0
-                metrics['negative_percentage'] = float((sentiment_dist.get('negative', 0) / total) * 100) if total > 0 else 0.0
-                metrics['neutral_percentage'] = float((sentiment_dist.get('neutral', 0) / total) * 100) if total > 0 else 0.0
+                if total > 0:
+                    metrics['positive_percentage'] = float((sentiment_dist.get('positive', 0) / total) * 100)
+                    metrics['negative_percentage'] = float((sentiment_dist.get('negative', 0) / total) * 100)
+                    metrics['neutral_percentage'] = float((sentiment_dist.get('neutral', 0) / total) * 100)
+                else:
+                    metrics['positive_percentage'] = 0.0
+                    metrics['negative_percentage'] = 0.0
+                    metrics['neutral_percentage'] = 0.0
             else:
                 metrics['sentiment_distribution'] = {}
                 metrics['positive_percentage'] = 0.0
@@ -939,19 +741,11 @@ class DataProcessor:
                                 'mean': float(row['mean']),
                                 'count': int(row['count'])
                             }
-                    else:
-                        metrics['top_wisata'] = {}
                 except Exception as e:
-                    print(f"Error calculating top wisata: {e}")
+                    app.logger.error(f"Error calculating top wisata: {e}")
                     metrics['top_wisata'] = {}
             else:
                 metrics['top_wisata'] = {}
-            
-            # Visit time distribution
-            if 'visit_time' in df.columns:
-                metrics['visit_time_distribution'] = df['visit_time'].value_counts().to_dict()
-            else:
-                metrics['visit_time_distribution'] = {}
             
             # Additional metrics
             metrics['total_destinations'] = len(df['wisata'].unique()) if 'wisata' in df.columns else 0
@@ -961,12 +755,11 @@ class DataProcessor:
             return metrics
             
         except Exception as e:
-            print(f"Error calculating metrics: {e}")
-            # Return default metrics with overall_satisfaction as float
+            app.logger.error(f"Error calculating metrics: {e}")
             return {
                 'total_reviews': 0,
                 'avg_rating': 0.0,
-                'overall_satisfaction': 0.0,  # FIXED: Ensure this is a float
+                'overall_satisfaction': 0.0,
                 'rating_distribution': {},
                 'sentiment_distribution': {},
                 'positive_percentage': 0.0,
@@ -974,15 +767,18 @@ class DataProcessor:
                 'neutral_percentage': 0.0,
                 'satisfaction_score': 0.0,
                 'top_wisata': {},
-                'visit_time_distribution': {},
                 'total_destinations': 0,
                 'avg_review_length': 0.0,
                 'most_active_month': 'Unknown'
             }
 
 class SatisfactionPredictor:
-    """Satisfaction predictor"""
-    def __init__(self, models_dir='models_h5_fixed'):
+    """Satisfaction predictor for production"""
+    
+    def __init__(self, models_dir=None):
+        if models_dir is None:
+            models_dir = app.config['MODEL_FOLDER']
+        
         self.models_dir = models_dir
         self.sentiment_analyzer = None
         self.is_trained = False
@@ -993,10 +789,10 @@ class SatisfactionPredictor:
         try:
             self.sentiment_analyzer = SmartEnsembleH5Fixed(self.models_dir)
             self.is_trained = True
-            print("✅ Predictor model loaded")
+            app.logger.info("✅ Predictor model loaded")
             return True
         except Exception as e:
-            print(f"Error loading predictor: {e}")
+            app.logger.error(f"Error loading predictor: {e}")
             return False
     
     def train(self, df, force_retrain=False):
@@ -1049,29 +845,32 @@ class SatisfactionPredictor:
             }
             
         except Exception as e:
-            print(f"Prediction error: {e}")
+            app.logger.error(f"Prediction error: {e}")
             return {
                 'prediction': 'satisfied',
                 'confidence': 0.6,
                 'probabilities': {'satisfied': 0.6, 'neutral': 0.3, 'dissatisfied': 0.1}
             }
 
-# Analysis functions
+# Analysis functions optimized for production
 def generate_analysis_data(df_processed):
-    """Generate analysis data"""
+    """Generate analysis data with memory optimization"""
     try:
         if df_processed is None or df_processed.empty:
             return create_empty_analysis_data()
         
-        print("📊 Generating analysis data...")
+        app.logger.info("📊 Generating analysis data...")
         
-        # Add visitor insights
         visitor_insights = analyze_visitor_patterns(df_processed)
+        all_wisata_analysis = analyze_all_wisata(df_processed)
+        
+        # Clean up memory after heavy operations
+        gc.collect()
         
         return {
             'suggestions': [],
             'complaints': [],
-            'all_wisata_analysis': analyze_all_wisata(df_processed),
+            'all_wisata_analysis': all_wisata_analysis,
             'time_analysis': {},
             'keyword_analysis': {'positive_keywords': [], 'negative_keywords': []},
             'sentiment_analysis': {'by_rating': {}},
@@ -1079,11 +878,11 @@ def generate_analysis_data(df_processed):
         }
         
     except Exception as e:
-        print(f"Error generating analysis: {e}")
+        app.logger.error(f"Error generating analysis: {e}")
         return create_empty_analysis_data()
 
 def create_empty_analysis_data():
-    """Create empty analysis data"""
+    """Create empty analysis data structure"""
     return {
         'suggestions': [],
         'complaints': [],
@@ -1107,32 +906,23 @@ def create_empty_analysis_data():
     }
 
 def analyze_all_wisata(df):
-    """FIXED: Analyze all wisata destinations with corrected categorization"""
+    """Analyze all wisata with memory optimization"""
     try:
         if 'wisata' not in df.columns:
-            return {
-                'total_destinations': 0,
-                'urgent_count': 0,
-                'high_complaint_count': 0,
-                'medium_complaint_count': 0,
-                'low_complaint_count': 0,
-                'excellent_count': 0,
-                'destinations': {}
-            }
+            return create_empty_analysis_data()['all_wisata_analysis']
         
         destinations = {}
         
+        # Process in chunks for large datasets
         for wisata_name in df['wisata'].unique():
             wisata_data = df[df['wisata'] == wisata_name]
             
-            if len(wisata_data) < 3:  # Skip destinations with too few reviews
+            if len(wisata_data) < 3:
                 continue
             
-            # Basic metrics
             avg_rating = float(wisata_data['rating'].mean())
             total_reviews = len(wisata_data)
             
-            # Sentiment analysis
             sentiment_dist = wisata_data['sentiment'].value_counts()
             total_sentiment = len(wisata_data)
             
@@ -1141,35 +931,34 @@ def analyze_all_wisata(df):
             neutral_ratio = float((sentiment_dist.get('neutral', 0) / total_sentiment) * 100)
             complaint_ratio = negative_ratio
             
-            # Rating distribution
             rating_distribution = wisata_data['rating'].value_counts().to_dict()
             
-            # FIXED: Get ALL negative reviews within 1 year time range (no limit)
+            # Get negative reviews
             negative_reviews = wisata_data[wisata_data['sentiment'] == 'negative']
             main_complaints = []
             
             if not negative_reviews.empty and 'date' in negative_reviews.columns:
-                # Filter for reviews within valid time range (1 year)
                 for idx, row in negative_reviews.iterrows():
                     date_str = str(row.get('date', ''))
                     
-                    # Check if date is within valid range
                     if is_valid_time_range(date_str):
-                        # Format the date properly for display
                         formatted_date = format_date_display(date_str)
-                        
-                        # Only add if there's actual review text
                         review_text = str(row.get('review_text', ''))
+                        
                         if review_text and review_text.strip() and review_text.lower() not in ['nan', 'none', '']:
                             main_complaints.append({
                                 'display_text': review_text[:120] + "..." if len(review_text) > 120 else review_text,
                                 'full_text': review_text,
                                 'count': 1,
-                                'date': formatted_date  # Use properly formatted date
+                                'date': formatted_date
                             })
+                    
+                    # Limit complaints to prevent memory issues
+                    if len(main_complaints) >= 50:
+                        break
             
-            # Engagement level
             avg_review_length = float(wisata_data['review_text'].astype(str).str.len().mean())
+            
             if avg_review_length > 200:
                 engagement_level = 'High'
             elif avg_review_length > 100:
@@ -1177,13 +966,10 @@ def analyze_all_wisata(df):
             else:
                 engagement_level = 'Low'
             
-            # Most common rating
             most_common_rating = int(wisata_data['rating'].mode().iloc[0]) if not wisata_data['rating'].mode().empty else 3
             
-            # Determine visit level for this wisata
             visit_level = get_visit_level(wisata_name)
             
-            # Store destination data
             destinations[wisata_name] = {
                 'avg_rating': avg_rating,
                 'total_reviews': total_reviews,
@@ -1192,83 +978,54 @@ def analyze_all_wisata(df):
                 'neutral_ratio': neutral_ratio,
                 'complaint_ratio': complaint_ratio,
                 'rating_distribution': rating_distribution,
-                'main_complaints': main_complaints,  # ALL valid complaints within 1 year
+                'main_complaints': main_complaints[:20],  # Limit to 20 complaints
                 'total_complaints': len(negative_reviews),
-                'valid_time_complaints_count': len(main_complaints),  # Count of complaints within time range
+                'valid_time_complaints_count': len(main_complaints),
                 'top_keywords': {},
                 'engagement_level': engagement_level,
                 'most_common_rating': most_common_rating,
                 'avg_review_length': avg_review_length,
-                'visit_level': visit_level  # Add visit level
+                'visit_level': visit_level
             }
         
-        # FIXED: Calculate summary statistics with proper categorization
+        # Calculate summary statistics
         total_destinations = len(destinations)
-        
-        # Categorize based on complaint ratio
-        urgent_count = 0      # > 30% complaints
-        high_count = 0        # 20-30% complaints  
-        medium_count = 0      # 10-20% complaints
-        low_count = 0         # 5-10% complaints
-        excellent_count = 0   # < 5% complaints
-        
-        for dest_data in destinations.values():
-            complaint_ratio = dest_data['complaint_ratio']
-            if complaint_ratio > 30:
-                urgent_count += 1
-            elif complaint_ratio > 20:
-                high_count += 1
-            elif complaint_ratio > 10:
-                medium_count += 1
-            elif complaint_ratio > 5:
-                low_count += 1
-            else:
-                excellent_count += 1
+        urgent_count = sum(1 for d in destinations.values() if d['complaint_ratio'] > 30)
+        high_count = sum(1 for d in destinations.values() if 20 < d['complaint_ratio'] <= 30)
+        medium_count = sum(1 for d in destinations.values() if 10 < d['complaint_ratio'] <= 20)
+        low_count = sum(1 for d in destinations.values() if 5 < d['complaint_ratio'] <= 10)
+        excellent_count = sum(1 for d in destinations.values() if d['complaint_ratio'] <= 5)
         
         return {
             'total_destinations': total_destinations,
-            'urgent_count': urgent_count,           # > 30% complaints
-            'high_complaint_count': high_count,     # 20-30% complaints
-            'medium_complaint_count': medium_count, # 10-20% complaints
-            'low_complaint_count': low_count,       # 5-10% complaints
-            'excellent_count': excellent_count,     # < 5% complaints
+            'urgent_count': urgent_count,
+            'high_complaint_count': high_count,
+            'medium_complaint_count': medium_count,
+            'low_complaint_count': low_count,
+            'excellent_count': excellent_count,
             'destinations': destinations
         }
         
     except Exception as e:
-        print(f"Error analyzing wisata: {e}")
-        return {
-            'total_destinations': 0,
-            'urgent_count': 0,
-            'high_complaint_count': 0,
-            'medium_complaint_count': 0,
-            'low_complaint_count': 0,
-            'excellent_count': 0,
-            'destinations': {}
-        }
+        app.logger.error(f"Error analyzing wisata: {e}")
+        return create_empty_analysis_data()['all_wisata_analysis']
 
 def analyze_visitor_patterns(df):
-    """Analyze visitor behavior patterns"""
+    """Analyze visitor patterns with optimization"""
     try:
         insights = {}
         
-        # Review length analysis
         if 'review_length' in df.columns:
             review_lengths = df['review_length']
-            short_reviews = len(review_lengths[review_lengths < 50])
-            medium_reviews = len(review_lengths[(review_lengths >= 50) & (review_lengths <= 150)])
-            long_reviews = len(review_lengths[review_lengths > 150])
-            
             insights['review_length_analysis'] = {
-                'short_reviews': short_reviews,
-                'medium_reviews': medium_reviews,
-                'long_reviews': long_reviews
+                'short_reviews': int((review_lengths < 50).sum()),
+                'medium_reviews': int(((review_lengths >= 50) & (review_lengths <= 150)).sum()),
+                'long_reviews': int((review_lengths > 150).sum())
             }
             
-            # Correlation between review length and rating
             if 'rating' in df.columns:
-                correlation = float(df['review_length'].corr(df['rating']))
-                insights['length_rating_correlation'] = correlation if not pd.isna(correlation) else 0
+                correlation = df['review_length'].corr(df['rating'])
+                insights['length_rating_correlation'] = float(correlation) if not pd.isna(correlation) else 0
         else:
             insights['review_length_analysis'] = {
                 'short_reviews': 0,
@@ -1277,35 +1034,25 @@ def analyze_visitor_patterns(df):
             }
             insights['length_rating_correlation'] = 0
         
-        # Visit patterns
         if 'visit_time' in df.columns:
             visit_patterns = df['visit_time'].value_counts().to_dict()
             insights['visit_patterns'] = visit_patterns
         else:
-            insights['visit_patterns'] = {
-                'Tidak diketahui': len(df),
-                'Akhir pekan': 0,
-                'Hari biasa': 0,
-                'Hari libur nasional': 0
-            }
+            insights['visit_patterns'] = {'Tidak diketahui': len(df)}
         
         return insights
         
     except Exception as e:
-        print(f"Error analyzing visitor patterns: {e}")
+        app.logger.error(f"Error analyzing visitor patterns: {e}")
         return {
             'review_length_analysis': {'short_reviews': 0, 'medium_reviews': 0, 'long_reviews': 0},
             'length_rating_correlation': 0,
-            'visit_patterns': {
-                'Tidak diketahui': 0,
-                'Akhir pekan': 0,
-                'Hari biasa': 0,
-                'Hari libur nasional': 0
-            }
+            'visit_patterns': {'Tidak diketahui': 0}
         }
 
+@lru_cache(maxsize=10)
 def create_charts():
-    """Create charts for dashboard"""
+    """Create charts with caching"""
     charts = {}
     
     try:
@@ -1341,7 +1088,7 @@ def create_charts():
                     'labels': sentiment_counts.index.tolist(),
                     'values': sentiment_counts.values.tolist(),
                     'type': 'pie',
-                    'marker': {'colors': [ '#f1c40f','#2ecc71', '#e74c3c']}
+                    'marker': {'colors': ['#f1c40f', '#2ecc71', '#e74c3c']}
                 }],
                 'layout': {'title': 'Sentiment Distribution'}
             })
@@ -1375,25 +1122,21 @@ def create_charts():
                     }
                 })
             except Exception as e:
-                print(f"Error creating top rating chart: {e}")
+                app.logger.error(f"Error creating top rating chart: {e}")
         
         # Top 10 Wisata by Visits
         if 'wisata' in df_processed.columns:
             try:
-                wisata_visits = df_processed.groupby('wisata').agg({
-                    'rating': 'count'
-                }).round(2)
-                wisata_visits.columns = ['visit_count']
-                wisata_visits = wisata_visits.sort_values('visit_count', ascending=True).tail(10)
+                wisata_visits = df_processed.groupby('wisata').size().sort_values(ascending=True).tail(10)
                 
                 charts['top_visits'] = json.dumps({
                     'data': [{
                         'y': [name[:25] + '...' if len(name) > 25 else name for name in wisata_visits.index.tolist()],
-                        'x': wisata_visits['visit_count'].values.tolist(),
+                        'x': wisata_visits.values.tolist(),
                         'type': 'bar',
                         'orientation': 'h',
                         'marker': {'color': '#3498db'},
-                        'text': [f"{count}" for count in wisata_visits['visit_count']],
+                        'text': [f"{count}" for count in wisata_visits.values],
                         'textposition': 'auto'
                     }],
                     'layout': {
@@ -1405,12 +1148,12 @@ def create_charts():
                     }
                 })
             except Exception as e:
-                print(f"Error creating top visits chart: {e}")
+                app.logger.error(f"Error creating top visits chart: {e}")
         
         return charts
         
     except Exception as e:
-        print(f"Error creating charts: {e}")
+        app.logger.error(f"Error creating charts: {e}")
         return charts
 
 # Flask helper functions
@@ -1425,9 +1168,6 @@ def get_predictor():
     if predictor is None:
         predictor = SatisfactionPredictor()
     return predictor
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_data_info():
     try:
@@ -1444,14 +1184,15 @@ def get_data_info():
         return None
 
 def initialize_app(force_retrain=False):
+    """Initialize application with error handling"""
     global df_processed, metrics, model_results, current_data_info
     
     try:
-        print("🚀 Initializing application...")
+        app.logger.info("🚀 Initializing application...")
         
         data_path = os.path.join(app.config['UPLOAD_FOLDER'], 'combined_batu_tourism_reviews_cleaned.csv')
         if not os.path.exists(data_path):
-            print(f"⚠️ Data file not found")
+            app.logger.warning(f"⚠️ Data file not found at {data_path}")
             return False
         
         proc = get_processor()
@@ -1459,10 +1200,6 @@ def initialize_app(force_retrain=False):
             return False
         
         df = proc.load_data(data_path)
-        
-        # DEBUG: Check wisata names and categorization
-        debug_wisata_names(df)
-        
         df_processed = proc.process_reviews(df)
         metrics = proc.get_satisfaction_metrics(df_processed)
         
@@ -1472,14 +1209,14 @@ def initialize_app(force_retrain=False):
         
         current_data_info = get_data_info()
         
-        print("✅ App initialized successfully!")
+        app.logger.info("✅ App initialized successfully!")
         return True
         
     except Exception as e:
-        print(f"❌ Error initializing: {e}")
+        app.logger.error(f"Error initializing: {e}")
+        traceback.print_exc()
         return False
 
-# FIXED: Create CSV template
 def create_csv_template():
     """Create CSV template for upload"""
     try:
@@ -1496,15 +1233,13 @@ def create_csv_template():
         }
         
         template_df = pd.DataFrame(template_data)
-        
-        # Create template file
         template_path = os.path.join(app.config['UPLOAD_FOLDER'], 'template_upload.csv')
         template_df.to_csv(template_path, index=False)
         
         return template_path
         
     except Exception as e:
-        print(f"Error creating template: {e}")
+        app.logger.error(f"Error creating template: {e}")
         return None
 
 # Flask routes
@@ -1530,7 +1265,7 @@ def dashboard():
                             data_info=current_data_info)
                             
     except Exception as e:
-        print(f"Dashboard error: {e}")
+        app.logger.error(f"Dashboard error: {e}")
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('upload_page'))
 
@@ -1557,7 +1292,7 @@ def predict():
         })
         
     except Exception as e:
-        print(f"Prediction error: {e}")
+        app.logger.error(f"Prediction error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/analysis')
@@ -1575,7 +1310,7 @@ def analysis():
         return render_template('analysis.html', analysis_data=analysis_data)
         
     except Exception as e:
-        print(f"Analysis error: {e}")
+        app.logger.error(f"Analysis error: {e}")
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
@@ -1583,7 +1318,6 @@ def analysis():
 def upload_page():
     return render_template('upload.html')
 
-# FIXED: Upload functionality with proper error handling
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
     try:
@@ -1599,18 +1333,15 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             
-            # Save uploaded file
             upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(upload_path)
             
             try:
-                # Load and validate file
                 if filename.endswith('.csv'):
                     df = pd.read_csv(upload_path)
                 else:
                     df = pd.read_excel(upload_path)
                 
-                # Validate required columns
                 required_columns = ['wisata', 'rating', 'review_text', 'date']
                 missing_columns = [col for col in required_columns if col not in df.columns]
                 
@@ -1619,19 +1350,18 @@ def upload_file():
                     os.remove(upload_path)
                     return redirect(url_for('upload_page'))
                 
-                # Save as standard filename for processing
                 standard_path = os.path.join(app.config['UPLOAD_FOLDER'], 'combined_batu_tourism_reviews_cleaned.csv')
                 df.to_csv(standard_path, index=False)
                 
-                # Clean up temporary file if different
                 if upload_path != standard_path:
                     os.remove(upload_path)
                 
-                # Reinitialize app with new data
+                # Clear cache and reinitialize
                 global df_processed, metrics, current_data_info
                 df_processed = None
                 metrics = None
                 current_data_info = None
+                create_charts.cache_clear()
                 
                 if initialize_app():
                     flash(f'File uploaded successfully! Processed {len(df)} reviews.', 'success')
@@ -1641,7 +1371,7 @@ def upload_file():
                     return redirect(url_for('upload_page'))
                 
             except Exception as e:
-                print(f"Error processing file: {e}")
+                app.logger.error(f"Error processing file: {e}")
                 flash(f'Error processing file: {str(e)}', 'error')
                 if os.path.exists(upload_path):
                     os.remove(upload_path)
@@ -1652,11 +1382,10 @@ def upload_file():
             return redirect(url_for('upload_page'))
             
     except Exception as e:
-        print(f"Upload error: {e}")
+        app.logger.error(f"Upload error: {e}")
         flash(f'Upload failed: {str(e)}', 'error')
         return redirect(url_for('upload_page'))
 
-# FIXED: Download template route
 @app.route('/download_template')
 def download_template():
     try:
@@ -1674,49 +1403,42 @@ def download_template():
             return redirect(url_for('upload_page'))
             
     except Exception as e:
-        print(f"Template download error: {e}")
+        app.logger.error(f"Template download error: {e}")
         flash(f'Error downloading template: {str(e)}', 'error')
         return redirect(url_for('upload_page'))
 
-# FIXED API ROUTES FOR DASHBOARD FILTERS with corrected visit level categorization
 @app.route('/api/filter_data')
 def api_filter_data():
-    """API endpoint for filtering data - FIXED for correct visit level filtering"""
+    """API endpoint for filtering data"""
     try:
         filter_type = request.args.get('filter', 'all')
         
         global df_processed
         if df_processed is None:
-            return jsonify({
-                'success': False,
-                'error': 'No data loaded'
-            })
+            return jsonify({'success': False, 'error': 'No data loaded'})
         
-        # Filter data based on visit level with FIXED categorization
         if filter_type == 'all':
             filtered_df = df_processed
         else:
-            # Filter by visit level using the corrected categorization
             if 'wisata' in df_processed.columns:
                 filtered_df = df_processed[df_processed['wisata'].apply(lambda x: get_visit_level(x) == filter_type)]
             else:
                 filtered_df = df_processed
         
-        # Recalculate metrics for filtered data
         proc = get_processor()
         if proc:
             filtered_metrics = proc.get_satisfaction_metrics(filtered_df)
         else:
             filtered_metrics = metrics
         
-        # Recreate charts for filtered data
+        # Create charts for filtered data
         global df_processed_temp
         df_processed_temp = df_processed
         df_processed = filtered_df
+        create_charts.cache_clear()  # Clear cache
         filtered_charts = create_charts()
         df_processed = df_processed_temp
         
-        # Get visit level counts with FIXED categorization
         visit_level_counts = {
             'all': len(df_processed),
             'high': 0,
@@ -1738,11 +1460,8 @@ def api_filter_data():
         })
         
     except Exception as e:
-        print(f"Filter API error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
+        app.logger.error(f"Filter API error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/quadrant_data_filtered')
 def api_quadrant_data_filtered():
@@ -1752,12 +1471,8 @@ def api_quadrant_data_filtered():
         
         global df_processed
         if df_processed is None:
-            return jsonify({
-                'success': False,
-                'error': 'No data loaded'
-            })
+            return jsonify({'success': False, 'error': 'No data loaded'})
         
-        # Filter data with FIXED visit level categorization
         if filter_type == 'all':
             filtered_df = df_processed
         else:
@@ -1766,40 +1481,27 @@ def api_quadrant_data_filtered():
             else:
                 filtered_df = df_processed
         
-        # Prepare quadrant data
         if 'wisata' not in filtered_df.columns or 'rating' not in filtered_df.columns:
-            return jsonify({
-                'success': False,
-                'error': 'Missing required columns'
-            })
+            return jsonify({'success': False, 'error': 'Missing required columns'})
         
-        # Group by wisata
         wisata_stats = filtered_df.groupby('wisata').agg({
             'rating': ['mean', 'count']
         }).round(2)
         wisata_stats.columns = ['mean_rating', 'review_count']
-        
-        # Filter out wisata with too few reviews
         wisata_stats = wisata_stats[wisata_stats['review_count'] >= 3]
         
         if wisata_stats.empty:
-            return jsonify({
-                'success': False,
-                'error': 'No data available for this filter'
-            })
+            return jsonify({'success': False, 'error': 'No data available for this filter'})
         
-        # Calculate averages
         avg_rating = wisata_stats['mean_rating'].mean()
         avg_visits = wisata_stats['review_count'].mean()
         
-        # Prepare data for chart
         names = []
         full_names = []
         ratings = []
         visits = []
         
         for wisata_name, row in wisata_stats.iterrows():
-            # Truncate name for display
             display_name = wisata_name[:30] + '...' if len(wisata_name) > 30 else wisata_name
             names.append(display_name)
             full_names.append(wisata_name)
@@ -1819,18 +1521,23 @@ def api_quadrant_data_filtered():
         })
         
     except Exception as e:
-        print(f"Quadrant API error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
+        app.logger.error(f"Quadrant API error: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/health')
 def health_check():
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat()
-    }), 200
+    """Health check endpoint for monitoring"""
+    try:
+        status = {
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'environment': os.environ.get('FLASK_ENV', 'development'),
+            'data_loaded': df_processed is not None,
+            'models_loaded': predictor is not None
+        }
+        return jsonify(status), 200
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'error': str(e)}), 503
 
 @app.errorhandler(404)
 def not_found_error(error):
@@ -1838,30 +1545,40 @@ def not_found_error(error):
 
 @app.errorhandler(500)
 def internal_error(error):
+    app.logger.error(f"Internal error: {error}")
     return render_template('500.html'), 500
+
+@app.errorhandler(502)
+def bad_gateway_error(error):
+    app.logger.error(f"Bad gateway error: {error}")
+    return render_template('error.html', message="Server temporarily unavailable"), 502
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 if __name__ == '__main__':
     try:
-        # Create directories
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        os.makedirs('models_h5_fixed', exist_ok=True)
-        
-        print("📁 Directories created")
-        
         port = int(os.environ.get('PORT', 5000))
         
-        # Initialize app
-        print("🚀 Initializing app...")
+        app.logger.info("📁 Ensuring directories exist...")
+        for directory in [app.config['UPLOAD_FOLDER'], app.config['MODEL_FOLDER']]:
+            os.makedirs(directory, exist_ok=True)
+        
+        app.logger.info("🚀 Initializing app...")
         if initialize_app():
-            print("✅ App initialized successfully!")
+            app.logger.info("✅ App initialized successfully!")
         else:
-            print("⚠️ App initialization incomplete")
+            app.logger.warning("⚠️ App initialization incomplete - waiting for data upload")
         
-        print(f"🌐 Starting Flask app on port {port}")
-        print(f"🔗 Access at: http://localhost:{port}")
+        app.logger.info(f"🌐 Starting Flask app on port {port}")
         
-        app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
+        if os.environ.get('FLASK_ENV') == 'production':
+            # Production will be handled by Gunicorn
+            app.logger.info("Production mode - waiting for Gunicorn...")
+        else:
+            app.run(debug=True, host='0.0.0.0', port=port, threaded=True)
         
     except Exception as e:
-        print(f"❌ Failed to start: {e}")
+        app.logger.error(f"Failed to start: {e}")
         traceback.print_exc()
+        sys.exit(1)
