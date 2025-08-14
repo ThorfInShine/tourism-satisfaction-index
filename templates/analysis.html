@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisis - Indeks Kepuasan Wisatawan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f8f9fa; 
+        }
+        .card { 
+            border-radius: 15px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+            margin-bottom: 20px;
+            border: none;
+        }
+        .navbar-brand { 
+            font-weight: bold; 
+        }
+        
+        .keyword-positive {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            display: inline-block;
+        }
+        .keyword-negative {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            display: inline-block;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-bottom: 20px;
+        }
+        .analysis-section {
+            margin-bottom: 40px;
+        }
+        .chart-container {
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        .wisata-card {
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .wisata-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        .insight-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .success-box {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        
+        /* Comprehensive Wisata Analysis Styles */
+        .metric-box {
+            padding: 12px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .metric-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .sentiment-box {
+            padding: 10px;
+            border-radius: 8px;
+            background-color: rgba(0,0,0,0.05);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .sentiment-box:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+
+        .complaint-analysis {
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #e53e3e;
+            margin: 10px 0;
+        }
+
+        .wisata-comprehensive-card {
+            transition: all 0.3s ease;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-width: 2px !important;
+        }
+
+        .wisata-comprehensive-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+
+        /* Summary Statistics */
+        .summary-stat-card {
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .summary-stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.2);
+        }
+
+        .summary-stat-card h3 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .summary-stat-card small {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .summary-total {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .summary-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .summary-warning {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+
+        .summary-success {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+        }
+
+        /* Rating Mini Chart */
+        .rating-mini-chart {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 12px 0;
+        }
+
+        .rating-bar {
+            height: 20px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rating-bar-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Visit Level Badge Styles */
+        .visit-level-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 25px;
+            font-size: 0.75em;
+            font-weight: 700;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .visit-level-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+
+        .visit-level-high {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        .visit-level-high:hover {
+            background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .visit-level-medium {
+            background: linear-gradient(135deg, #f8f5e4 0%, #e8dcc6 100%);
+            color: #5a5a5a;
+            border-color: rgba(139, 123, 87, 0.3);
+            box-shadow: 0 3px 10px rgba(139, 123, 87, 0.2);
+        }
+
+        .visit-level-medium:hover {
+            background: linear-gradient(135deg, #e8dcc6 0%, #f8f5e4 100%);
+            box-shadow: 0 6px 20px rgba(139, 123, 87, 0.3);
+            color: #4a4a4a;
+        }
+
+        .visit-level-low {
+            background: linear-gradient(135deg, #ffc107 0%, #ffdb4d 100%);
+            color: #5a5a5a;
+            border-color: rgba(255, 193, 7, 0.4);
+            box-shadow: 0 3px 10px rgba(255, 193, 7, 0.3);
+        }
+
+        .visit-level-low:hover {
+            background: linear-gradient(135deg, #ffdb4d 0%, #ffc107 100%);
+            box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+            color: #4a4a4a;
+        }
+
+        .rating-section {
+            position: relative;
+        }
+
+        /* Pagination & Navigation Controls */
+        .pagination-navigation-controls {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            color: white;
+        }
+
+        .pagination-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 0 5px;
+            backdrop-filter: blur(10px);
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+            color: white;
+        }
+
+        .pagination-btn:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.5;
+        }
+
+        .pagination-info {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 12px 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            font-weight: bold;
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-box {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            color: white;
+            padding: 12px 15px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+            box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25);
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .clear-search-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            border-radius: 10px;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+
+        .clear-search-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .pagination-navigation-controls h6 {
+            color: white;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .pagination-navigation-controls .fas {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Enhanced Complaint Carousel Styles */
+        .complaint-carousel {
+            position: relative;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffebee 100%);
+            border-radius: 12px;
+            padding: 18px;
+            margin: 12px 0;
+            border-left: 5px solid #dc3545;
+            min-height: 140px;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.15);
+        }
+
+        .complaint-carousel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid rgba(220, 53, 69, 0.1);
+        }
+
+        .complaint-carousel-title {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #721c24;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .complaint-carousel-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .complaint-nav-btn {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .complaint-nav-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .complaint-nav-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.5;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .complaint-indicator {
+            font-size: 0.85rem;
+            color: #721c24;
+            font-weight: bold;
+            padding: 6px 12px;
+            background: rgba(220, 53, 69, 0.1);
+            border-radius: 20px;
+            border: 2px solid rgba(220, 53, 69, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .complaint-content {
+            position: relative;
+            overflow: hidden;
+            min-height: 80px;
+        }
+
+        .complaint-item {
+            background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+            padding: 15px 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.1);
+        }
+
+        .complaint-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
+        }
+
+        .complaint-text {
+            font-weight: 500;
+            color: #721c24;
+            margin-bottom: 10px;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .complaint-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(220, 53, 69, 0.1);
+        }
+
+        .btn-view-full {
+            background: none;
+            border: none;
+            color: #007bff;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .btn-view-full:hover {
+            color: #0056b3;
+            background: rgba(0, 123, 255, 0.1);
+            text-decoration: underline;
+        }
+
+        .complaint-count {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            box-shadow: 0 2px 6px rgba(220, 53, 69, 0.3);
+        }
+
+        .complaint-date {
+            font-size: 0.75rem;
+            color: #6c757d;
+            font-style: italic;
+            margin-top: 5px;
+        }
+
+        /* No complaints state */
+        .no-complaints-state {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            border: 2px solid #28a745;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            color: #155724;
+            margin: 12px 0;
+        }
+
+        /* Loading Animation */
+        .loading-card {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner-custom {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Fade-in animation CSS */
+        .wisata-item {
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .wisata-item.hidden {
+            display: none;
+        }
+
+        /* Search highlight */
+        .search-highlight {
+            background-color: rgba(255, 255, 0, 0.3);
+            font-weight: bold;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        /* Simplified Visitor Insights Styles */
+        .visitor-pattern-card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .visitor-pattern-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+        }
+
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Chart Container Enhanced */
+        .chart-container-enhanced {
+            height: 450px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        }
+
+        /* Chart Controls */
+        .chart-controls .btn {
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .chart-controls .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255,255,255,0.3);
+        }
+
+        /* Modal Styles */
+        .modal-body {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .wisata-comprehensive-card {
+                margin-bottom: 20px;
+            }
+            
+            .metric-box h5 {
+                font-size: 1.1em;
+            }
+
+            .summary-stat-card h3 {
+                font-size: 2rem;
+            }
+
+            .rating-mini-chart {
+                padding: 10px;
+            }
+
+            .visit-level-badge {
+                font-size: 0.7em;
+                padding: 4px 10px;
+            }
+
+            .pagination-navigation-controls {
+                padding: 15px;
+            }
+
+            .pagination-btn {
+                padding: 10px 15px;
+                font-size: 0.9em;
+                margin: 2px;
+            }
+
+            .pagination-info {
+                font-size: 0.9em;
+                padding: 10px 15px;
+                margin-top: 10px;
+            }
+
+            .search-box {
+                margin-bottom: 10px;
+            }
+            
+            .chart-container-enhanced {
+                height: 350px;
+                padding: 15px;
+            }
+
+            .complaint-carousel-controls {
+                gap: 8px;
+            }
+
+            .complaint-nav-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 0.75rem;
+            }
+
+            .complaint-carousel {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .chart-container-enhanced {
+                height: 300px;
+                padding: 10px;
+            }
+
+            .complaint-carousel {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-chart-line me-2"></i>Indeks Kepuasan Wisatawan
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link active" href="/analysis">
+                    <i class="fas fa-analytics me-1"></i>Analisis
+                </a>
+                <a class="nav-link" href="/upload">
+                    <i class="fas fa-upload me-1"></i>Upload Data
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+
+        <!-- COMPREHENSIVE ALL WISATA ANALYSIS SECTION -->
+        {% if analysis_data.all_wisata_analysis %}
+        <div class="analysis-section">
+            <h3 class="mb-4">
+                <i class="fas fa-map-marked-alt me-2 text-primary"></i>
+                Analisis Komprehensif Semua Destinasi Wisata
+            </h3>
+            
+            <!-- Summary Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="summary-stat-card summary-total">
+                        <h3>{{ analysis_data.all_wisata_analysis.total_destinations or 0 }}</h3>
+                        <small><i class="fas fa-map-marker-alt me-2"></i>Total Destinasi</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-stat-card summary-danger">
+                        <h3>{{ analysis_data.all_wisata_analysis.high_complaint_count or 0 }}</h3>
+                        <small><i class="fas fa-exclamation-circle me-2"></i>Keluhan Tinggi (>20%)</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-stat-card summary-warning">
+                        <h3>{{ analysis_data.all_wisata_analysis.medium_complaint_count or 0 }}</h3>
+                        <small><i class="fas fa-exclamation-triangle me-2"></i>Keluhan Sedang (10-20%)</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="summary-stat-card summary-success">
+                        <h3>{{ analysis_data.all_wisata_analysis.low_complaint_count or 0 }}</h3>
+                        <small><i class="fas fa-check-circle me-2"></i>Keluhan Rendah (<10%)</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pagination & Navigation Controls with Search -->
+            <div class="pagination-navigation-controls">
+                <h6 class="mb-3">
+                    <i class="fas fa-layer-group me-2"></i>
+                    Navigasi Destinasi
+                </h6>
+                
+                <!-- Search Row -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-0">
+                                <i class="fas fa-search text-primary"></i>
+                            </span>
+                            <input type="text" class="form-control search-box border-0" id="searchWisata" 
+                                placeholder="Cari nama destinasi (contoh: museum, taman, coban)..." autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn clear-search-btn w-100" id="clearSearch">
+                            <i class="fas fa-times me-1"></i>Clear Search
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Navigation Row -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div class="d-flex align-items-center">
+                        <button class="btn pagination-btn" id="prevPage" disabled>
+                            <i class="fas fa-chevron-left me-2"></i>Sebelumnya
+                        </button>
+                        <button class="btn pagination-btn" id="nextPage">
+                            Selanjutnya<i class="fas fa-chevron-right ms-2"></i>
+                        </button>
+                    </div>
+                    <div class="pagination-info mt-2 mt-md-0" id="pageInfo">
+                        Halaman 1 dari 1 (Menampilkan 1-6 dari {{ analysis_data.all_wisata_analysis.total_destinations or 0 }} destinasi)
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Wisata Analysis Cards -->
+            {% if analysis_data.all_wisata_analysis.destinations %}
+            <div class="row" id="wisataContainer">
+                {% set sorted_destinations = analysis_data.all_wisata_analysis.destinations.items() | list %}
+                {% set sorted_by_complaints = sorted_destinations | sort(attribute='1.complaint_ratio', reverse=true) %}
+                
+                {% for wisata_name, wisata_data in sorted_by_complaints %}
+                <div class="col-xl-4 col-lg-6 col-md-12 mb-4 wisata-item" 
+                     data-name="{{ wisata_name|lower }}"
+                     data-complaint-ratio="{{ wisata_data.complaint_ratio or 0 }}">
+                    <div class="card wisata-comprehensive-card h-100 
+                        {% if wisata_data.complaint_ratio and wisata_data.complaint_ratio > 20 %}border-danger
+                        {% elif wisata_data.complaint_ratio and wisata_data.complaint_ratio > 10 %}border-warning
+                        {% else %}border-success{% endif %}">
+                        
+                        <!-- Card Header dengan Status Indicator berdasarkan keluhan -->
+                        <div class="card-header 
+                            {% if wisata_data.complaint_ratio and wisata_data.complaint_ratio > 20 %}bg-danger text-white
+                            {% elif wisata_data.complaint_ratio and wisata_data.complaint_ratio > 10 %}bg-warning text-dark
+                            {% else %}bg-success text-white{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold wisata-name">
+                                        <i class="fas fa-map-marker-alt me-2"></i>
+                                        {{ wisata_name[:45] }}{% if wisata_name|length > 45 %}...{% endif %}
+                                    </h6>
+                                    <small class="opacity-75">
+                                        {% if wisata_data.complaint_ratio and wisata_data.complaint_ratio > 20 %}
+                                            <i class="fas fa-exclamation-circle me-1"></i>Perlu Perhatian Urgent
+                                        {% elif wisata_data.complaint_ratio and wisata_data.complaint_ratio > 10 %}
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Perlu Monitoring
+                                        {% else %}
+                                            <i class="fas fa-check-circle me-1"></i>Performa Excellent
+                                        {% endif %}
+                                    </small>
+                                </div>
+
+                                <div class="text-end rating-section">
+                                    <div class="badge bg-light text-dark px-2 py-1">
+                                        <strong>
+                                            {% if wisata_data.avg_rating %}
+                                                {{ "%.2f"|format(wisata_data.avg_rating) }}/5
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </strong>
+                                    </div>
+                                    
+                                    <!-- Visit Level Badge -->
+                                    <div class="mt-1">
+                                        {% set wisata_lower = wisata_name|lower %}
+                                        {% if wisata_lower in [
+                                            'jalur pendakian gunung panderman', 'bns (batu night spectacular)',
+                                            'museum angkut +', 'wana wisata coban talun', 'taman rekreasi selecta',
+                                            'jatim park i', 'jatim park ii', 'alun-alun kota wisata batu'
+                                        ] %}
+                                            <span class="visit-level-badge visit-level-high">
+                                                <i class="fas fa-users me-1"></i>Kunjungan Tinggi
+                                            </span>
+                                        {% elif wisata_lower in [
+                                            'goa pinus', 'batu rafting', 'desa wisata bumaji', 'wonderland waterpark',
+                                            'taman dolan', 'jalur pendakian gunung arjuno', 'taman pinus campervan park',
+                                            'petik apel mandiri', 'desa wisata punten', 'desa wisata pandesari (lumbung stroben)',
+                                            'songgoriti hot spring + pemandian tirta nirwana songgoriti',
+                                            'desa wisata tulungrejo', 'wana wisata coban putri', 'gunung banyak',
+                                            'wana love coban rais', 'predator fun park/batu economis park',
+                                            'desa wisata sidomulyo', 'batu love garden', 'millenial glow garden',
+                                            'pemandian air panas alam cangar', 'eco green park'
+                                        ] %}
+                                            <span class="visit-level-badge visit-level-medium">
+                                                <i class="fas fa-user-friends me-1"></i>Kunjungan Sedang
+                                            </span>
+                                        {% else %}
+                                            <span class="visit-level-badge visit-level-low">
+                                                <i class="fas fa-user me-1"></i>Kunjungan Rendah
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <!-- Key Metrics Row -->
+                            <div class="row mb-3">
+                                <div class="col-4">
+                                    <div class="metric-box">
+                                        <h5 class="text-primary mb-1">{{ wisata_data.total_reviews or 0 }}</h5>
+                                        <small class="text-muted">Reviews</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-box">
+                                        <h5 class="{% if wisata_data.complaint_ratio and wisata_data.complaint_ratio > 20 %}text-danger{% elif wisata_data.complaint_ratio and wisata_data.complaint_ratio > 10 %}text-warning{% else %}text-success{% endif %} mb-1">
+                                            {% if wisata_data.complaint_ratio %}
+                                                {{ "%.1f"|format(wisata_data.complaint_ratio) }}%
+                                            {% else %}
+                                                0.0%
+                                            {% endif %}
+                                        </h5>
+                                        <small class="text-muted">Keluhan</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-box">
+                                        <h5 class="text-success mb-1">
+                                            {% if wisata_data.positive_ratio %}
+                                                {{ "%.1f"|format(wisata_data.positive_ratio) }}%
+                                            {% else %}
+                                                0.0%
+                                            {% endif %}
+                                        </h5>
+                                        <small class="text-muted">Positif</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Rating Distribution Mini Chart -->
+                            {% if wisata_data.rating_distribution %}
+                            <div class="rating-mini-chart">
+                                <h6 class="mb-2"><i class="fas fa-star me-2 text-warning"></i>Distribusi Rating:</h6>
+                                {% for rating in range(5, 0, -1) %}
+                                    {% set count = wisata_data.rating_distribution.get(rating, 0) %}
+                                    {% set percentage = (count/wisata_data.total_reviews*100) if wisata_data.total_reviews and wisata_data.total_reviews > 0 else 0 %}
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="me-2 fw-bold" style="min-width: 25px; font-size: 0.85em;">{{ rating }}★</span>
+                                        <div class="rating-bar flex-grow-1 me-2">
+                                            <div class="rating-bar-fill 
+                                                {% if rating >= 4 %}bg-success
+                                                {% elif rating >= 3 %}bg-warning
+                                                {% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ percentage|round }}%">
+                                                {% if percentage > 25 %}
+                                                    {{ "%.0f"|format(percentage) }}%
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <span class="text-muted" style="min-width: 35px; font-size: 0.8em;">{{ count }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <!-- Enhanced Complaint Carousel for Wisata Cards -->
+                            {% if wisata_data.main_complaints %}
+                            <div class="complaint-carousel" data-carousel-id="wisata-carousel-{{ loop.index }}">
+                                <div class="complaint-carousel-header">
+                                    <h6 class="complaint-carousel-title">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Keluhan Utama (1 Tahun Terakhir):
+                                    </h6>
+                                    <div class="complaint-carousel-controls">
+                                        <button class="complaint-nav-btn" data-direction="prev" data-target="wisata-carousel-{{ loop.index }}">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                        <span class="complaint-indicator">
+                                            <span class="current-index">1</span>/<span class="total-items">{{ wisata_data.main_complaints|length }}</span>
+                                        </span>
+                                        <button class="complaint-nav-btn" data-direction="next" data-target="wisata-carousel-{{ loop.index }}">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="complaint-content">
+                                    {% for complaint in wisata_data.main_complaints %}
+                                    <div class="complaint-item" style="{% if loop.index > 1 %}display: none;{% endif %}">
+                                        <div class="complaint-text">{{ complaint.display_text }}</div>
+                                        {% if complaint.date %}
+                                        <div class="complaint-date">
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            {{ complaint.date }}
+                                        </div>
+                                        {% endif %}
+                                        <div class="complaint-actions">
+                                            <button class="btn-view-full" onclick="showFullComplaint('{{ complaint.full_text|e }}')">
+                                                <i class="fas fa-eye me-1"></i>Lihat Selengkapnya
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="no-complaints-state">
+                                <div class="mb-2">
+                                    <i class="fas fa-smile fa-2x text-success"></i>
+                                </div>
+                                <h6 class="fw-bold">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    Tidak Ada Keluhan Signifikan
+                                </h6>
+                                <small>Dalam 1 tahun terakhir tidak ada keluhan yang terdeteksi</small>
+                            </div>
+                            {% endif %}
+
+                            <!-- Sentiment Breakdown -->
+                            <h6 class="mb-2 mt-3"><i class="fas fa-heart me-2 text-pink"></i>Sentimen:</h6>
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="sentiment-box text-success">
+                                        <div class="fw-bold">
+                                            {% if wisata_data.positive_ratio %}
+                                                {{ "%.0f"|format(wisata_data.positive_ratio) }}%
+                                            {% else %}
+                                                0%
+                                            {% endif %}
+                                        </div>
+                                        <small>Positif</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="sentiment-box text-warning">
+                                        <div class="fw-bold">
+                                            {% if wisata_data.neutral_ratio %}
+                                                {{ "%.0f"|format(wisata_data.neutral_ratio) }}%
+                                            {% else %}
+                                                0%
+                                            {% endif %}
+                                        </div>
+                                        <small>Netral</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="sentiment-box text-danger">
+                                        <div class="fw-bold">
+                                            {% if wisata_data.negative_ratio %}
+                                                {{ "%.0f"|format(wisata_data.negative_ratio) }}%
+                                            {% else %}
+                                                0%
+                                            {% endif %}
+                                        </div>
+                                        <small>Negatif</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Stats Footer -->
+                            <div class="mt-3 pt-2 border-top">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-comment-dots me-1"></i>
+                                            <strong>Engagement:</strong> {{ wisata_data.engagement_level or 'Low' }}
+                                        </small>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-star me-1"></i>
+                                            <strong>Rating Umum:</strong> {{ wisata_data.most_common_rating or 'N/A' }}★
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="loading-card">
+                    <i class="fas fa-info-circle fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Tidak ada data destinasi wisata tersedia</h5>
+                    <p class="text-muted">Silakan upload data terlebih dahulu</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- No Results Message -->
+            <div id="noResults" class="text-center py-5" style="display: none;">
+                <div class="loading-card">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Tidak ada destinasi yang sesuai dengan pencarian</h5>
+                    <p class="text-muted">Coba kata kunci yang berbeda atau hapus pencarian</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="analysis-section">
+            <h3 class="mb-4">
+                <i class="fas fa-map-marked-alt me-2 text-primary"></i>
+                Analisis Komprehensif Semua Destinasi Wisata
+            </h3>
+            <div class="loading-card">
+                <div class="spinner-custom"></div>
+                <p>Memuat analisis destinasi wisata...</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Simplified Visitor Insights -->
+        <div class="analysis-section">
+            <h3 class="mb-4">
+                <i class="fas fa-users me-2 text-info"></i>
+                Visitor Insights
+            </h3>
+            
+            <!-- Single Chart Row -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card visitor-pattern-card">
+                        <div class="card-header bg-gradient-primary text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-clock me-2"></i>
+                                    Pola Kunjungan Wisatawan
+                                </h5>
+                                <div class="chart-controls">
+                                    <button class="btn btn-sm btn-outline-light" id="chartTypeToggle">
+                                        <i class="fas fa-exchange-alt me-1"></i>Toggle View
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="visitPatternChart" class="chart-container-enhanced"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Methodology Section -->
+        <div class="analysis-section">
+            <h3 class="mb-4">
+                <i class="fas fa-info-circle me-2 text-info"></i>
+                Metodologi Analisis
+            </h3>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-book me-2"></i>
+                                Penjelasan Metrik dan Kategori
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-medal me-2"></i>Performance Level (Berdasarkan Tingkat Keluhan):</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><span class="badge bg-danger me-2">Perlu Perhatian Urgent</span> Keluhan > 20%</li>
+                                        <li class="mb-2"><span class="badge bg-warning me-2">Perlu Monitoring</span> Keluhan 10-20%</li>
+                                        <li class="mb-2"><span class="badge bg-success me-2">Performa Excellent</span> Keluhan < 10%</li>
+                                    </ul>
+                                    
+                                    <h6><i class="fas fa-users me-2"></i>Tingkat Kunjungan:</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2">
+                                            <span class="visit-level-badge visit-level-high me-2">Kunjungan Tinggi</span> 
+                                        </li>
+                                        <li class="mb-2">
+                                            <span class="visit-level-badge visit-level-medium me-2">Kunjungan Sedang</span> 
+                                        </li>
+                                        <li class="mb-2">
+                                            <span class="visit-level-badge visit-level-low me-2">Kunjungan Rendah</span> 
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6><i class="fas fa-chart-line me-2"></i>Analisis Pola Kunjungan:</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-3">
+                                            <span class="badge bg-success me-2">Weekend</span>
+                                            Kunjungan terbanyak di akhir pekan
+                                            <small class="text-muted d-block">Wisatawan lebih aktif saat libur kerja</small>
+                                        </li>
+                                        <li class="mb-3">
+                                            <span class="badge bg-warning me-2">Weekday</span>
+                                            Kunjungan di hari kerja
+                                            <small class="text-muted d-block">Biasanya wisatawan lokal atau grup terorganisir</small>
+                                        </li>
+                                        <li class="mb-3">
+                                            <span class="badge bg-info me-2">Holiday</span>
+                                            Kunjungan saat hari libur nasional
+                                            <small class="text-muted d-block">Peak season dengan volume tertinggi</small>
+                                        </li>
+                                    </ul>
+
+                                    <h6><i class="fas fa-clock me-2"></i>Filter Waktu Keluhan:</h6>
+                                    <div class="alert alert-info">
+                                        <small>
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>Keluhan Utama:</strong> Menampilkan semua keluhan dalam rentang waktu 1 tahun terakhir untuk memberikan gambaran yang lebih komprehensif tentang masalah yang dialami wisatawan.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h6><i class="fas fa-sort-amount-down me-2"></i>Pengurutan Destinasi:</h6>
+                                    <div class="alert alert-warning">
+                                        <p class="mb-2"><strong>Destinasi diurutkan berdasarkan tingkat keluhan (dari tinggi ke rendah):</strong></p>
+                                        <ol>
+                                            <li><strong>Perlu Perhatian Urgent</strong> - Keluhan > 20% (ditampilkan pertama)</li>
+                                            <li><strong>Perlu Monitoring</strong> - Keluhan 10-20%</li>
+                                            <li><strong>Performa Excellent</strong> - Keluhan < 10% (ditampilkan terakhir)</li>
+                                        </ol>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Pengurutan ini membantu mengidentifikasi destinasi yang membutuhkan perhatian prioritas.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Full Complaint Text -->
+    <div class="modal fade" id="complaintModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-comment-alt me-2"></i>
+                        Keluhan Lengkap
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Berikut adalah teks lengkap dari keluhan yang dipilih:
+                    </div>
+                    <div class="p-3 bg-light rounded">
+                        <p id="fullComplaintText" class="mb-0"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Function to show full complaint text in modal
+        function showFullComplaint(fullText) {
+            // Clean the text from HTML entities
+            const cleanText = fullText.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+            
+            document.getElementById('fullComplaintText').textContent = cleanText;
+            
+            const modal = new bootstrap.Modal(document.getElementById('complaintModal'));
+            modal.show();
+        }
+
+        // Enhanced Complaint Carousel System
+        class ComplaintCarousel {
+            constructor() {
+                this.carousels = new Map();
+                this.initialize();
+            }
+            
+            initialize() {
+                // Find all carousel containers
+                const carouselContainers = document.querySelectorAll('[data-carousel-id]');
+                
+                carouselContainers.forEach(container => {
+                    const carouselId = container.dataset.carouselId;
+                    const items = container.querySelectorAll('.complaint-item');
+                    const prevBtn = container.querySelector('[data-direction="prev"]');
+                    const nextBtn = container.querySelector('[data-direction="next"]');
+                    const currentIndexSpan = container.querySelector('.current-index');
+                    const totalItemsSpan = container.querySelector('.total-items');
+                    
+                    if (items.length > 0) {
+                        this.carousels.set(carouselId, {
+                            container,
+                            items: Array.from(items),
+                            currentIndex: 0,
+                            totalItems: items.length,
+                            prevBtn,
+                            nextBtn,
+                            currentIndexSpan,
+                            totalItemsSpan
+                        });
+                        
+                        // Set up event listeners
+                        if (prevBtn) {
+                            prevBtn.addEventListener('click', () => this.navigate(carouselId, -1));
+                        }
+                        if (nextBtn) {
+                            nextBtn.addEventListener('click', () => this.navigate(carouselId, 1));
+                        }
+                        
+                        // Initial update
+                        this.updateCarousel(carouselId);
+                    }
+                });
+                
+                console.log(`✅ Initialized ${this.carousels.size} complaint carousels`);
+            }
+            
+            navigate(carouselId, direction) {
+                const carousel = this.carousels.get(carouselId);
+                if (!carousel) return;
+                
+                const newIndex = carousel.currentIndex + direction;
+                
+                // Handle wrapping
+                if (newIndex < 0) {
+                    carousel.currentIndex = carousel.totalItems - 1;
+                } else if (newIndex >= carousel.totalItems) {
+                    carousel.currentIndex = 0;
+                } else {
+                    carousel.currentIndex = newIndex;
+                }
+                
+                this.updateCarousel(carouselId);
+            }
+            
+            updateCarousel(carouselId) {
+                const carousel = this.carousels.get(carouselId);
+                if (!carousel) return;
+                
+                // Hide all items with fade effect
+                carousel.items.forEach((item, index) => {
+                    if (index !== carousel.currentIndex) {
+                        item.style.display = 'none';
+                        item.style.opacity = '0';
+                    }
+                });
+                
+                // Show current item with fade effect
+                const currentItem = carousel.items[carousel.currentIndex];
+                if (currentItem) {
+                    currentItem.style.display = 'block';
+                    setTimeout(() => {
+                        currentItem.style.opacity = '1';
+                    }, 50);
+                }
+                
+                // Update indicator
+                if (carousel.currentIndexSpan) {
+                    carousel.currentIndexSpan.textContent = carousel.currentIndex + 1;
+                }
+                if (carousel.totalItemsSpan) {
+                    carousel.totalItemsSpan.textContent = carousel.totalItems;
+                }
+                
+                // Update button states (always enabled for infinite scroll)
+                if (carousel.prevBtn) {
+                    carousel.prevBtn.disabled = false;
+                }
+                if (carousel.nextBtn) {
+                    carousel.nextBtn.disabled = false;
+                }
+                
+                // Add visual feedback for navigation
+                if (carousel.prevBtn && carousel.nextBtn) {
+                    carousel.prevBtn.style.transform = 'scale(0.95)';
+                    carousel.nextBtn.style.transform = 'scale(0.95)';
+                    
+                    setTimeout(() => {
+                        carousel.prevBtn.style.transform = 'scale(1)';
+                        carousel.nextBtn.style.transform = 'scale(1)';
+                    }, 150);
+                }
+            }
+        }
+
+        // Combined Navigation and Search System
+        class NavigationWithSearch {
+            constructor() {
+                // Pagination settings
+                this.currentPage = 1;
+                this.itemsPerPage = 6;
+                
+                // Get DOM elements
+                this.searchInput = document.getElementById('searchWisata');
+                this.clearSearchBtn = document.getElementById('clearSearch');
+                this.prevPageBtn = document.getElementById('prevPage');
+                this.nextPageBtn = document.getElementById('nextPage');
+                this.pageInfo = document.getElementById('pageInfo');
+                this.noResults = document.getElementById('noResults');
+                this.wisataContainer = document.getElementById('wisataContainer');
+                
+                // Get all items (already sorted by complaint ratio in template)
+                this.allItems = Array.from(document.querySelectorAll('.wisata-item'));
+                this.filteredItems = [...this.allItems]; // Initially show all items
+                this.totalItems = this.allItems.length;
+                
+                this.initialize();
+            }
+            
+            initialize() {
+                if (!this.searchInput || !this.wisataContainer) {
+                    console.log('❌ Required elements not found');
+                    return;
+                }
+                
+                console.log(`✅ Navigation with Search initialized with ${this.totalItems} items (sorted by complaint ratio)`);
+                
+                // Add event listeners
+                this.addEventListeners();
+                
+                // Initial display
+                this.displayCurrentPage();
+            }
+            
+            addEventListeners() {
+                // Search input with debounce
+                let searchTimeout;
+                this.searchInput.addEventListener('input', () => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.performSearch();
+                    }, 300);
+                });
+                
+                // Clear search button
+                if (this.clearSearchBtn) {
+                    this.clearSearchBtn.addEventListener('click', () => {
+                        this.clearSearch();
+                    });
+                }
+                
+                // Pagination buttons
+                if (this.prevPageBtn) {
+                    this.prevPageBtn.addEventListener('click', () => {
+                        this.goToPreviousPage();
+                    });
+                }
+                
+                if (this.nextPageBtn) {
+                    this.nextPageBtn.addEventListener('click', () => {
+                        this.goToNextPage();
+                    });
+                }
+                
+                // Enter key support for search
+                this.searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.performSearch();
+                    }
+                });
+            }
+            
+            performSearch() {
+                const searchTerm = this.searchInput.value.toLowerCase().trim();
+                console.log(`🔍 Searching for: "${searchTerm}"`);
+                
+                if (searchTerm === '') {
+                    // Show all items (maintain original sort order)
+                    this.filteredItems = [...this.allItems];
+                } else {
+                    // Filter items based on search term but maintain sort order
+                    this.filteredItems = this.allItems.filter(item => {
+                        const wisataName = item.dataset.name || '';
+                        return wisataName.includes(searchTerm);
+                    });
+                }
+                
+                // Reset to first page after search
+                this.currentPage = 1;
+                
+                // Update display
+                this.displayCurrentPage();
+                
+                console.log(`✅ Search completed: ${this.filteredItems.length} items found`);
+            }
+            
+            displayCurrentPage() {
+                // Hide all items first
+                this.allItems.forEach(item => {
+                    item.style.display = 'none';
+                    item.classList.remove('hidden');
+                });
+                
+                // Check if we have items to display
+                if (this.filteredItems.length === 0) {
+                    if (this.noResults) this.noResults.style.display = 'block';
+                    this.updatePaginationInfo();
+                    return;
+                }
+                
+                if (this.noResults) this.noResults.style.display = 'none';
+                
+                // Calculate items for current page
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = startIndex + this.itemsPerPage;
+                const pageItems = this.filteredItems.slice(startIndex, endIndex);
+                
+                console.log(`📄 Displaying page ${this.currentPage}: items ${startIndex + 1} to ${Math.min(endIndex, this.filteredItems.length)}`);
+                
+                // Show items for current page with highlight
+                const searchTerm = this.searchInput.value.toLowerCase().trim();
+                pageItems.forEach((item, index) => {
+                    item.style.display = 'block';
+                    
+                    // Add highlight if there's a search term
+                    const nameElement = item.querySelector('.wisata-name');
+                    if (nameElement) {
+                        this.removeHighlight(nameElement);
+                        if (searchTerm !== '') {
+                            this.highlightText(nameElement, searchTerm);
+                        }
+                    }
+                    
+                    // Staggered animation
+                    setTimeout(() => {
+                        item.style.opacity = '1';
+                    }, index * 50);
+                });
+                
+                // Update pagination
+                this.updatePaginationInfo();
+            }
+            
+            highlightText(element, searchTerm) {
+                const originalHTML = element.innerHTML;
+                const originalText = element.textContent;
+                const regex = new RegExp(`(${searchTerm})`, 'gi');
+                
+                // Only highlight the text content, preserve HTML structure
+                const highlightedText = originalText.replace(regex, '<span class="search-highlight">$1</span>');
+                
+                // Replace only the text part, keeping the icon
+                const iconHTML = '<i class="fas fa-map-marker-alt me-2"></i>';
+                element.innerHTML = iconHTML + originalText.replace(regex, '<span class="search-highlight">$1</span>');
+            }
+            
+            removeHighlight(element) {
+                const highlightedSpans = element.querySelectorAll('.search-highlight');
+                highlightedSpans.forEach(span => {
+                    const parent = span.parentNode;
+                    parent.replaceChild(document.createTextNode(span.textContent), span);
+                    parent.normalize();
+                });
+            }
+            
+            goToPreviousPage() {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                    this.displayCurrentPage();
+                    console.log(`⬅️ Moved to page ${this.currentPage}`);
+                }
+            }
+            
+            goToNextPage() {
+                const totalPages = Math.ceil(this.filteredItems.length / this.itemsPerPage);
+                if (this.currentPage < totalPages) {
+                    this.currentPage++;
+                    this.displayCurrentPage();
+                    console.log(`➡️ Moved to page ${this.currentPage}`);
+                }
+            }
+            
+            updatePaginationInfo() {
+                const totalItems = this.filteredItems.length;
+                const totalPages = Math.ceil(totalItems / this.itemsPerPage);
+                const startItem = totalItems > 0 ? (this.currentPage - 1) * this.itemsPerPage + 1 : 0;
+                const endItem = Math.min(this.currentPage * this.itemsPerPage, totalItems);
+                
+                // Update page info
+                if (this.pageInfo) {
+                    if (this.searchInput.value.trim() !== '') {
+                        this.pageInfo.textContent = `Halaman ${this.currentPage} dari ${totalPages} (Menampilkan ${startItem}-${endItem} dari ${totalItems} hasil pencarian)`;
+                    } else {
+                        this.pageInfo.textContent = `Halaman ${this.currentPage} dari ${totalPages} (Menampilkan ${startItem}-${endItem} dari ${totalItems} destinasi)`;
+                    }
+                }
+                
+                // Update button states
+                if (this.prevPageBtn) {
+                    this.prevPageBtn.disabled = this.currentPage <= 1;
+                }
+                if (this.nextPageBtn) {
+                    this.nextPageBtn.disabled = this.currentPage >= totalPages || totalItems === 0;
+                }
+            }
+            
+            clearSearch() {
+                console.log('🧹 Clearing search');
+                
+                // Clear search input
+                this.searchInput.value = '';
+                
+                // Reset filtered items to all items (maintain sort order)
+                this.filteredItems = [...this.allItems];
+                
+                // Reset to first page
+                this.currentPage = 1;
+                
+                // Remove all highlights
+                this.allItems.forEach(item => {
+                    const nameElement = item.querySelector('.wisata-name');
+                    if (nameElement) {
+                        this.removeHighlight(nameElement);
+                    }
+                });
+                
+                // Update display
+                this.displayCurrentPage();
+                
+                // Focus back to search input
+                this.searchInput.focus();
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 DOM loaded, initializing systems...');
+            
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Initialize complaint carousels
+            setTimeout(() => {
+                new ComplaintCarousel();
+            }, 100);
+            
+            // Initialize navigation system
+            setTimeout(() => {
+                new NavigationWithSearch();
+            }, 200);
+        });
+        
+        // Enhanced Visit Pattern Chart
+        {% if analysis_data.visitor_insights and analysis_data.visitor_insights.get('visit_patterns') %}
+        var visitData = {{ analysis_data.visitor_insights.visit_patterns|tojson }};
+        {% else %}
+        var visitData = {
+            'Tidak diketahui': 2135,
+            'Akhir pekan': 312,
+            'Hari biasa': 265,
+            'Hari libur nasional': 135
+        };
+        {% endif %}
+        
+        var currentChartType = 'pie';
+
+        function renderVisitPatternChart(type = 'pie') {
+            var data, layout;
+            
+            if (type === 'pie') {
+                data = [{
+                    labels: Object.keys(visitData),
+                    values: Object.values(visitData),
+                    type: 'pie',
+                    hole: 0.4,
+                    marker: {
+                        colors: ['#28a745', '#17a2b8', '#ffc107', '#dc3545', '#6f42c1'],
+                        line: {
+                            color: '#ffffff',
+                            width: 2
+                        }
+                    },
+                    textinfo: 'label+percent',
+                    textposition: 'outside',
+                    hovertemplate: '<b>%{label}</b><br>%{value} kunjungan<br>%{percent}<extra></extra>',
+                    pull: [0.05, 0, 0, 0, 0]
+                }];
+                
+                layout = {
+                    title: {
+                        text: 'Distribusi Waktu Kunjungan',
+                        font: { size: 16, color: '#333' }
+                    },
+                    annotations: [{
+                        font: { size: 20, color: '#333' },
+                        showarrow: false,
+                        text: Object.values(visitData).reduce((a, b) => a + b, 0) + '<br>Total<br>Kunjungan',
+                        x: 0.5,
+                        y: 0.5
+                    }],
+                    showlegend: true,
+                    legend: {
+                        orientation: 'v',
+                        x: 1.05,
+                        y: 0.5
+                    }
+                };
+            } else {
+                data = [{
+                    x: Object.keys(visitData),
+                    y: Object.values(visitData),
+                    type: 'bar',
+                    marker: {
+                        color: ['#28a745', '#17a2b8', '#ffc107', '#dc3545', '#6f42c1'],
+                        line: {
+                            color: '#ffffff',
+                            width: 1
+                        }
+                    },
+                    hovertemplate: '<b>%{x}</b><br>%{y} kunjungan<extra></extra>'
+                }];
+                
+                layout = {
+                    title: {
+                        text: 'Distribusi Waktu Kunjungan',
+                        font: { size: 16, color: '#333' }
+                    },
+                    xaxis: { title: 'Waktu Kunjungan' },
+                    yaxis: { title: 'Jumlah Kunjungan' }
+                };
+            }
+            
+            layout.plot_bgcolor = 'rgba(0,0,0,0)';
+            layout.paper_bgcolor = 'rgba(0,0,0,0)';
+            layout.margin = { t: 50, r: 50, b: 50, l: 50 };
+            
+            Plotly.newPlot('visitPatternChart', data, layout, {
+                responsive: true,
+                displayModeBar: false
+            });
+        }
+
+        // Chart type toggle
+        const chartToggleBtn = document.getElementById('chartTypeToggle');
+        if (chartToggleBtn) {
+            chartToggleBtn.addEventListener('click', function() {
+                currentChartType = currentChartType === 'pie' ? 'bar' : 'pie';
+                renderVisitPatternChart(currentChartType);
+                
+                this.innerHTML = currentChartType === 'pie' ? 
+                    '<i class="fas fa-chart-bar me-1"></i>Bar Chart' : 
+                    '<i class="fas fa-chart-pie me-1"></i>Pie Chart';
+            });
+        }
+
+        // Initial render
+        renderVisitPatternChart();
+    </script>
+</body>
+</html>
