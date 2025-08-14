@@ -1,62 +1,106 @@
-name: Auto Deploy to Hostinger
+name: Deploy to Hostinger - batas.bpskotabatu.com
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  DEPLOY_HOST: 168.231.103.168
+  DEPLOY_USER: root
+  DEPLOY_PATH: /var/www/html/batas.bpskotabatu.com
+  APP_NAME: batas-app
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout Repository
+    - name: 📥 Checkout Repository
       uses: actions/checkout@v4
-    
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    
-    - name: Deploy to Server
+
+    - name: 🚀 Deploy to Hostinger Server
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        password: ${{ secrets.PASSWORD }}
+        host: ${{ secrets.DEPLOY_HOST }}
+        username: ${{ secrets.DEPLOY_USER }}
+        password: ${{ secrets.DEPLOY_PASSWORD }}
         script: |
-          echo "🚀 Starting deployment..."
+          echo "🚀 Starting deployment for batas.bpskotabatu.com..."
+          echo "📅 Deployment time: $(date)"
           
-          # Navigate to project directory
-          cd /var/www/html/batas.bpskotabatu.com
+          # Set working directory
+          cd ${{ env.DEPLOY_PATH }}
           
-          # Backup current data
+          # Create backup of current data
+          echo "📦 Creating backup..."
           if [ -f "data/combined_batu_tourism_reviews_cleaned.csv" ]; then
+            sudo mkdir -p data/backups
             sudo cp data/combined_batu_tourism_reviews_cleaned.csv data/backups/backup_$(date +%Y%m%d_%H%M%S).csv
-            echo "✅ Data backed up"
+            echo "✅ Data backed up successfully"
+          else
+            echo "⚠️ No existing data file found"
           fi
           
-          # Pull latest code
-          sudo git fetch origin
-          sudo git reset --hard origin/main
-          echo "✅ Code updated"
+          # Stop application temporarily
+          echo "⏸️ Stopping application..."
+          sudo supervisorctl stop ${{ env.APP_NAME }} || true
           
-          # Install/update dependencies
-          sudo -u www-data /var/www/html/batas.bpskotabatu.com/venv/bin/pip install -r requirements.txt
+          # Pull latest code from GitHub
+          echo "📡 Pulling latest code..."
+          sudo git fetch origin main
+          sudo git reset --hard origin/main
+          echo "✅ Code updated from GitHub"
+          
+          # Update Python dependencies
+          echo "📦 Installing dependencies..."
+          sudo -u www-data ${{ env.DEPLOY_PATH }}/venv/bin/pip install --upgrade pip
+          sudo -u www-data ${{ env.DEPLOY_PATH }}/venv/bin/pip install -r requirements.txt --quiet
           echo "✅ Dependencies updated"
           
-          # Set permissions
-          sudo chown -R www-data:www-data /var/www/html/batas.bpskotabatu.com
-          sudo chmod -R 755 /var/www/html/batas.bpskotabatu.com
+          # Set proper permissions
+          echo "🔐 Setting permissions..."
+          sudo chown -R www-data:www-data ${{ env.DEPLOY_PATH }}
+          sudo chmod -R 755 ${{ env.DEPLOY_PATH }}
+          sudo chmod 644 ${{ env.DEPLOY_PATH }}/data/*.csv 2>/dev/null || true
           echo "✅ Permissions set"
           
-          # Restart application
-          sudo supervisorctl restart batas-app
-          echo "✅ Application restarted"
+          # Start application
+          echo "▶️ Starting application..."
+          sudo supervisorctl start ${{ env.APP_NAME }}
+          sleep 5
           
-          # Test Nginx configuration
-          sudo nginx -t && sudo systemctl reload nginx
-          echo "✅ Nginx reloaded"
+          # Check application status
+          if sudo supervisorctl status ${{ env.APP_NAME }} | grep -q "RUNNING"; then
+            echo "✅ Flask application started successfully"
+          else
+            echo "❌ Flask application failed to start"
+            sudo supervisorctl status ${{ env.APP_NAME }}
+            sudo tail -20 /var/log/supervisor/batas-app.log
+            exit 1
+          fi
+          
+          # Test Nginx configuration and reload
+          echo "🔄 Reloading Nginx..."
+          sudo nginx -t
+          if [ $? -eq 0 ]; then
+            sudo systemctl reload nginx
+            echo "✅ Nginx reloaded successfully"
+          else
+            echo "❌ Nginx configuration error"
+            sudo nginx -t
+            exit 1
+          fi
+          
+          # Test application health
+          echo "🏥 Testing application health..."
+          sleep 3
+          curl -f http://127.0.0.1:5000/health || {
+            echo "❌ Application health check failed"
+            sudo supervisorctl status ${{ env.APP_NAME }}
+            exit 1
+          }
           
           echo "🎉 Deployment completed successfully!"
-          
+          echo "🌐 Website available at: https://batas.bpskotabatu.com"
+          echo "📊 Health check: https://batas.bpskotabatu.com/health"

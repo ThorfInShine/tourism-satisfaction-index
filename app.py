@@ -2,12 +2,14 @@
 import sys
 print(f"Python version: {sys.version}")
 
+import os
+import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file
 import pandas as pd
 import plotly.graph_objs as go
 import plotly.utils
 import json
-import os
 import pickle
 import joblib
 from werkzeug.utils import secure_filename
@@ -60,14 +62,91 @@ def signal_handler(sig, frame):
 
 signal.signal(signal.SIGINT, signal_handler)
 
+# Initialize Flask app
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here-12345')
+
+# Configuration based on environment
+def configure_app():
+    """Configure Flask app based on environment"""
+    if os.environ.get('FLASK_ENV') == 'production':
+        # Production configuration
+        app.config['DEBUG'] = False
+        app.config['TESTING'] = False
+        app.config['UPLOAD_FOLDER'] = '/var/www/html/batas.bpskotabatu.com/data'
+        app.config['MODELS_FOLDER'] = '/var/www/html/batas.bpskotabatu.com/models_h5_fixed'
+        app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+        
+        # Get secret key from environment or use generated one
+        secret_key = os.environ.get('SECRET_KEY')
+        if not secret_key:
+            # Try to read from file
+            try:
+                with open('/var/www/html/batas.bpskotabatu.com/secret_key.txt', 'r') as f:
+                    secret_key = f.read().strip()
+            except:
+                # Fallback secret key
+                secret_key = 'batas-kepuasan-wisatawan-production-key-2024-hostinger-secure'
+        
+        app.secret_key = secret_key
+        
+        # Setup production logging
+        if not app.debug:
+            file_handler = RotatingFileHandler(
+                '/var/log/supervisor/batas-app.log', 
+                maxBytes=10240000, 
+                backupCount=10
+            )
+            file_handler.setFormatter(logging.Formatter(
+                '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+            ))
+            file_handler.setLevel(logging.INFO)
+            app.logger.addHandler(file_handler)
+            app.logger.setLevel(logging.INFO)
+            app.logger.info('Tourism Satisfaction Index Application Started')
+            
+    else:
+        # Development configuration
+        app.config['DEBUG'] = True
+        app.config['TESTING'] = True
+        app.config['UPLOAD_FOLDER'] = 'data'
+        app.config['MODELS_FOLDER'] = 'models_h5_fixed'
+        app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20MB
+        app.secret_key = 'development-secret-key-tourism-satisfaction-2024'
+
+# Configure the app
+configure_app()
+
+# Ensure directories exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['MODELS_FOLDER'], exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'backups'), exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'temp'), exist_ok=True)
+
+# Helper functions
+def get_model_path(filename):
+    """Get full path to model file"""
+    return os.path.join(app.config['MODELS_FOLDER'], filename)
+
+def get_data_path():
+    """Get full path to main data file"""
+    return os.path.join(app.config['UPLOAD_FOLDER'], 'combined_batu_tourism_reviews_cleaned.csv')
+
+def log_info(message):
+    """Log info message"""
+    if app.config.get('DEBUG'):
+        print(f"INFO: {message}")
+    else:
+        app.logger.info(message)
+
+def log_error(message):
+    """Log error message"""
+    if app.config.get('DEBUG'):
+        print(f"ERROR: {message}")
+    else:
+        app.logger.error(message)
 
 # Configuration
-UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'data')
 ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Initialize components with lazy loading
 processor = None
@@ -149,12 +228,10 @@ def get_visit_level(wisata_name):
 def debug_wisata_names(df):
     """Debug function to check wisata names and their categorization"""
     if 'wisata' not in df.columns:
-        print("❌ No 'wisata' column in dataframe")
+        log_error("No 'wisata' column in dataframe")
         return
     
-    print("\n" + "="*80)
-    print("🔍 DEBUG: WISATA CATEGORIZATION CHECK")
-    print("="*80)
+    log_info("DEBUG: WISATA CATEGORIZATION CHECK")
     
     # Get unique wisata names
     unique_wisata = df['wisata'].unique()
@@ -172,36 +249,10 @@ def debug_wisata_names(df):
             categorization[level].append(wisata)
     
     # Print results
-    print(f"\n📊 TOTAL UNIQUE WISATA: {len(unique_wisata)}")
-    print(f"\n🟢 HIGH VISITS ({len(categorization['high'])} wisata):")
-    for w in sorted(categorization['high']):
-        print(f"   - {w}")
-    
-    print(f"\n🟡 MEDIUM VISITS ({len(categorization['medium'])} wisata):")
-    for w in sorted(categorization['medium']):
-        print(f"   - {w}")
-    
-    print(f"\n🔴 LOW VISITS ({len(categorization['low'])} wisata):")
-    for w in sorted(categorization['low'])[:10]:  # Show only first 10 for low
-        print(f"   - {w}")
-    if len(categorization['low']) > 10:
-        print(f"   ... and {len(categorization['low']) - 10} more")
-    
-    print("\n" + "="*80)
-    
-    # Check for expected high visit wisata that might be missing
-    print("\n⚠️ CHECKING EXPECTED HIGH VISIT WISATA:")
-    for expected in VISIT_LEVEL_HIGH:
-        found = False
-        for wisata in unique_wisata:
-            if pd.notna(wisata) and expected.lower() in str(wisata).lower():
-                found = True
-                print(f"   ✅ Found: {expected} -> {wisata}")
-                break
-        if not found:
-            print(f"   ❌ NOT FOUND: {expected}")
-    
-    print("="*80 + "\n")
+    log_info(f"TOTAL UNIQUE WISATA: {len(unique_wisata)}")
+    log_info(f"HIGH VISITS ({len(categorization['high'])} wisata)")
+    log_info(f"MEDIUM VISITS ({len(categorization['medium'])} wisata)")
+    log_info(f"LOW VISITS ({len(categorization['low'])} wisata)")
 
 # Define valid time ranges for filtering complaints
 VALID_TIME_RANGES = [
@@ -248,25 +299,27 @@ def format_date_display(date_str):
 class FixedH5ModelLoader:
     """FIXED utility class to load models from H5 format"""
     
-    def __init__(self, models_dir='models_h5_fixed'):
+    def __init__(self, models_dir=None):
+        if models_dir is None:
+            models_dir = app.config['MODELS_FOLDER']
         self.models_dir = models_dir
         self.label_encoder_classes = None
-        print(f"🔧 Initializing H5 Model Loader from: {models_dir}")
+        log_info(f"Initializing H5 Model Loader from: {models_dir}")
         
         # Check if directory exists
         if not os.path.exists(models_dir):
-            print(f"⚠️ Models directory not found: {models_dir}")
-            print("   Creating directory...")
+            log_info(f"Models directory not found: {models_dir}")
+            log_info("Creating directory...")
             os.makedirs(models_dir, exist_ok=True)
     
     def load_label_encoder(self, filepath=None):
         """Load label encoder classes from H5 file"""
         if filepath is None:
-            filepath = os.path.join(self.models_dir, 'label_encoder.h5')
+            filepath = get_model_path('label_encoder.h5')
         
         try:
             if os.path.exists(filepath):
-                print(f"🏷️ Loading label encoder from: {filepath}")
+                log_info(f"Loading label encoder from: {filepath}")
                 with h5py.File(filepath, 'r') as f:
                     # Try different possible keys for classes
                     classes_data = None
@@ -285,35 +338,35 @@ class FixedH5ModelLoader:
                             classes = [str(cls) for cls in classes_data]
                         
                         self.label_encoder_classes = classes
-                        print(f"   ✅ Loaded classes: {self.label_encoder_classes}")
+                        log_info(f"Loaded classes: {self.label_encoder_classes}")
                         return classes
                     else:
-                        print("   ⚠️ No classes data found in H5 file")
+                        log_error("No classes data found in H5 file")
             else:
-                print(f"   ⚠️ Label encoder file not found: {filepath}")
+                log_error(f"Label encoder file not found: {filepath}")
                 
         except Exception as e:
-            print(f"❌ Error loading label encoder: {e}")
+            log_error(f"Error loading label encoder: {e}")
         
         # Default fallback classes
         self.label_encoder_classes = ['negative', 'neutral', 'positive']
-        print(f"   ⚠️ Using default classes: {self.label_encoder_classes}")
+        log_info(f"Using default classes: {self.label_encoder_classes}")
         return self.label_encoder_classes
     
     def load_sklearn_model(self, filepath, model_name):
         """Load sklearn model from H5 file with multiple methods"""
         try:
             if not os.path.exists(filepath):
-                print(f"   ❌ Model file not found: {filepath}")
+                log_error(f"Model file not found: {filepath}")
                 return None
                 
-            print(f"🔤 Loading {model_name} from: {filepath}")
+            log_info(f"Loading {model_name} from: {filepath}")
             
             with h5py.File(filepath, 'r') as f:
                 # Try Method 1: Joblib (most reliable)
                 if 'joblib_compressed' in f:
                     try:
-                        print(f"   🔍 Trying Method 1: Joblib")
+                        log_info(f"Trying Method 1: Joblib")
                         joblib_bytes = f['joblib_compressed'][:]
                         
                         # Write to temporary file
@@ -325,42 +378,42 @@ class FixedH5ModelLoader:
                         model = joblib.load(temp_path)
                         os.unlink(temp_path)
                         
-                        print(f"   ✅ Method 1 (Joblib) SUCCESS: {model_name}")
+                        log_info(f"Method 1 (Joblib) SUCCESS: {model_name}")
                         return model
                         
                     except Exception as e:
-                        print(f"   ⚠️ Method 1 (Joblib) failed: {str(e)[:100]}")
+                        log_error(f"Method 1 (Joblib) failed: {str(e)[:100]}")
                 
                 # Try Method 2: Standard pickle
                 if 'full_pipeline_pickle' in f:
                     try:
-                        print(f"   🔍 Trying Method 2: Pickle")
+                        log_info(f"Trying Method 2: Pickle")
                         pipeline_bytes = f['full_pipeline_pickle'][:]
                         buffer = io.BytesIO(pipeline_bytes.tobytes())
                         model = pickle.load(buffer)
                         
-                        print(f"   ✅ Method 2 (Pickle) SUCCESS: {model_name}")
+                        log_info(f"Method 2 (Pickle) SUCCESS: {model_name}")
                         return model
                         
                     except Exception as e:
-                        print(f"   ⚠️ Method 2 (Pickle) failed: {str(e)[:100]}")
+                        log_error(f"Method 2 (Pickle) failed: {str(e)[:100]}")
                 
-                print(f"   ❌ All loading methods failed for {model_name}")
+                log_error(f"All loading methods failed for {model_name}")
                 return None
                 
         except Exception as e:
-            print(f"❌ Error loading {model_name}: {e}")
+            log_error(f"Error loading {model_name}: {e}")
             return None
     
     def load_lstm_model(self, filepath=None):
         """Load LSTM model from H5 files"""
         if filepath is None:
-            filepath = os.path.join(self.models_dir, 'lstm_model.h5')
+            filepath = get_model_path('lstm_model.h5')
         
-        tf_filepath = os.path.join(self.models_dir, 'lstm_model_tensorflow.h5')
+        tf_filepath = get_model_path('lstm_model_tensorflow.h5')
         
         try:
-            print(f"🧠 Loading LSTM model...")
+            log_info(f"Loading LSTM model...")
             
             lstm_data = None
             tokenizer = None
@@ -384,18 +437,18 @@ class FixedH5ModelLoader:
                                 tokenizer_bytes = tokenizer_group['tokenizer_pickle'][:]
                                 buffer = io.BytesIO(tokenizer_bytes.tobytes())
                                 tokenizer = pickle.load(buffer)
-                                print(f"   ✅ Tokenizer loaded")
+                                log_info("Tokenizer loaded")
                             except Exception as e:
-                                print(f"   ⚠️ Failed to load tokenizer: {e}")
+                                log_error(f"Failed to load tokenizer: {e}")
             
             # Load TensorFlow model
             model = None
             if os.path.exists(tf_filepath):
                 try:
                     model = tf.keras.models.load_model(tf_filepath, compile=False)
-                    print(f"   ✅ TensorFlow model loaded")
+                    log_info("TensorFlow model loaded")
                 except Exception as e:
-                    print(f"   ❌ Failed to load TensorFlow model: {e}")
+                    log_error(f"Failed to load TensorFlow model: {e}")
             
             # Return if we have both components
             if tokenizer is not None and model is not None:
@@ -409,14 +462,16 @@ class FixedH5ModelLoader:
             return None
                 
         except Exception as e:
-            print(f"❌ Error loading LSTM model: {e}")
+            log_error(f"Error loading LSTM model: {e}")
             return None
 
 class SmartEnsembleH5Fixed:
     """FIXED Smart Ensemble that loads models from H5 format"""
     
-    def __init__(self, models_dir='models_h5_fixed'):
-        print("🚀 Initializing FIXED Smart Ensemble from H5 format...")
+    def __init__(self, models_dir=None):
+        log_info("Initializing FIXED Smart Ensemble from H5 format...")
+        if models_dir is None:
+            models_dir = app.config['MODELS_FOLDER']
         self.models_dir = models_dir
         self.model_name = "Smart Ensemble H5 Fixed"
         self.model_type = "h5_ensemble_fixed"
@@ -436,7 +491,7 @@ class SmartEnsembleH5Fixed:
         self.lstm_ready = False
         
         # Ensemble parameters
-        self.use_manual_weights = True  # ← BARIS BARU
+        self.use_manual_weights = True
         self.ensemble_weights = [0.2, 0, 0.8]
         
         # Load all components
@@ -449,28 +504,28 @@ class SmartEnsembleH5Fixed:
             self.label_encoder_classes = self.h5_loader.load_label_encoder()
             
             # Load TF-IDF + LR
-            tfidf_path = os.path.join(self.models_dir, 'tfidf_lr_model.h5')
+            tfidf_path = get_model_path('tfidf_lr_model.h5')
             self.tfidf_lr = self.h5_loader.load_sklearn_model(tfidf_path, 'TF-IDF + LR')
             if self.tfidf_lr:
                 # Check if weight is 0, if yes, disable the model
                 if hasattr(self, 'use_manual_weights') and self.use_manual_weights and self.ensemble_weights[0] == 0:
                     self.tfidf_lr_ready = False
-                    print("   ⚠️ TF-IDF + LR loaded but disabled (weight=0)")
+                    log_info("TF-IDF + LR loaded but disabled (weight=0)")
                 else:
                     self.tfidf_lr_ready = True
-                    print("   ✅ TF-IDF + LR loaded successfully")
+                    log_info("TF-IDF + LR loaded successfully")
             
             # Load Random Forest
-            rf_path = os.path.join(self.models_dir, 'random_forest_model.h5')
+            rf_path = get_model_path('random_forest_model.h5')
             self.rf = self.h5_loader.load_sklearn_model(rf_path, 'Random Forest')
             if self.rf:
                 # Check if weight is 0, if yes, disable the model
                 if hasattr(self, 'use_manual_weights') and self.use_manual_weights and self.ensemble_weights[1] == 0:
                     self.rf_ready = False
-                    print("   ⚠️ Random Forest loaded but disabled (weight=0)")
+                    log_info("Random Forest loaded but disabled (weight=0)")
                 else:
                     self.rf_ready = True
-                    print("   ✅ Random Forest loaded successfully")
+                    log_info("Random Forest loaded successfully")
             
             # Load LSTM
             if TENSORFLOW_AVAILABLE:
@@ -479,10 +534,10 @@ class SmartEnsembleH5Fixed:
                     # Check if weight is 0, if yes, disable the model
                     if hasattr(self, 'use_manual_weights') and self.use_manual_weights and self.ensemble_weights[2] == 0:
                         self.lstm_ready = False
-                        print("   ⚠️ LSTM loaded but disabled (weight=0)")
+                        log_info("LSTM loaded but disabled (weight=0)")
                     else:
                         self.lstm_ready = True
-                        print("   ✅ LSTM loaded successfully")
+                        log_info("LSTM loaded successfully")
             
             # Count active models (models with weight > 0)
             active_models = 0
@@ -496,30 +551,30 @@ class SmartEnsembleH5Fixed:
             # Count loaded models (regardless of weight)
             loaded_models = sum([self.tfidf_lr is not None, self.rf is not None, self.lstm_data is not None])
             
-            print(f"\n📊 MODEL STATUS:")
-            print(f"   TF-IDF + LR: {self.tfidf_lr_ready} (weight={self.ensemble_weights[0]:.2f})")
-            print(f"   Random Forest: {self.rf_ready} (weight={self.ensemble_weights[1]:.2f})")
-            print(f"   LSTM: {self.lstm_ready} (weight={self.ensemble_weights[2]:.2f})")
-            print(f"   Loaded Models: {loaded_models}/3")
-            print(f"   Active Models: {active_models}/3")
+            log_info(f"MODEL STATUS:")
+            log_info(f"TF-IDF + LR: {self.tfidf_lr_ready} (weight={self.ensemble_weights[0]:.2f})")
+            log_info(f"Random Forest: {self.rf_ready} (weight={self.ensemble_weights[1]:.2f})")
+            log_info(f"LSTM: {self.lstm_ready} (weight={self.ensemble_weights[2]:.2f})")
+            log_info(f"Loaded Models: {loaded_models}/3")
+            log_info(f"Active Models: {active_models}/3")
             
             # Create fallback if needed
             if active_models == 0:
-                print("⚠️ No active models (all weights are 0), creating fallback...")
+                log_info("No active models (all weights are 0), creating fallback...")
                 self.create_fallback_models()
                 active_models = sum([self.tfidf_lr_ready, self.rf_ready, self.lstm_ready])
             
             if active_models > 0:
                 self.adjust_weights()
                 self.update_model_name()
-                print(f"✅ Ensemble ready with {active_models} active component(s)")
+                log_info(f"Ensemble ready with {active_models} active component(s)")
                 return True
             else:
-                print("❌ No models available")
+                log_error("No models available")
                 return False
                 
         except Exception as e:
-            print(f"❌ Error loading ensemble: {e}")
+            log_error(f"Error loading ensemble: {e}")
             self.create_fallback_models()
             return self.tfidf_lr_ready or self.rf_ready or self.lstm_ready
     
@@ -529,7 +584,7 @@ class SmartEnsembleH5Fixed:
             return False
             
         try:
-            print("🔧 Creating fallback models...")
+            log_info("Creating fallback models...")
             
             # Training data
             texts = [
@@ -548,7 +603,7 @@ class SmartEnsembleH5Fixed:
                     ])
                     self.tfidf_lr.fit(texts, labels)
                     self.tfidf_lr_ready = True
-                    print("   ✅ Fallback TF-IDF + LR created")
+                    log_info("Fallback TF-IDF + LR created")
                 except:
                     pass
             
@@ -561,21 +616,21 @@ class SmartEnsembleH5Fixed:
                     ])
                     self.rf.fit(texts, labels)
                     self.rf_ready = True
-                    print("   ✅ Fallback Random Forest created")
+                    log_info("Fallback Random Forest created")
                 except:
                     pass
             
             return self.tfidf_lr_ready or self.rf_ready
             
         except Exception as e:
-            print(f"❌ Error creating fallback: {e}")
+            log_error(f"Error creating fallback: {e}")
             return False
     
     def adjust_weights(self):
         """Adjust ensemble weights based on working components"""
         if hasattr(self, 'use_manual_weights') and self.use_manual_weights:
-            print(f"📊 Using MANUAL weights: TF-IDF={self.ensemble_weights[0]:.2f}, RF={self.ensemble_weights[1]:.2f}, LSTM={self.ensemble_weights[2]:.2f}")
-            return  # ← KUNCI: Return di sini!
+            log_info(f"Using MANUAL weights: TF-IDF={self.ensemble_weights[0]:.2f}, RF={self.ensemble_weights[1]:.2f}, LSTM={self.ensemble_weights[2]:.2f}")
+            return
         
         working = []
         if self.tfidf_lr_ready:
@@ -592,7 +647,7 @@ class SmartEnsembleH5Fixed:
             for idx in working:
                 self.ensemble_weights[idx] = weight
         
-        print(f"📊 Weights: TF-IDF={self.ensemble_weights[0]:.2f}, RF={self.ensemble_weights[1]:.2f}, LSTM={self.ensemble_weights[2]:.2f}")
+        log_info(f"Weights: TF-IDF={self.ensemble_weights[0]:.2f}, RF={self.ensemble_weights[1]:.2f}, LSTM={self.ensemble_weights[2]:.2f}")
     
     def update_model_name(self):
         """Update model name based on active models (weight > 0)"""
@@ -744,7 +799,7 @@ class SmartEnsembleH5Fixed:
                 return result
                 
         except Exception as e:
-            print(f"Prediction error: {e}")
+            log_error(f"Prediction error: {e}")
             return {
                 'text': text,
                 'sentiment': 'neutral',
@@ -763,7 +818,7 @@ class SmartEnsembleH5Fixed:
             results.extend(batch_results)
             
             if i % 1000 == 0:
-                print(f"   Processed {min(i + batch_size, total)}/{total} texts")
+                log_info(f"Processed {min(i + batch_size, total)}/{total} texts")
         
         return results
     
@@ -789,7 +844,9 @@ class SmartEnsembleH5Fixed:
 
 class DataProcessor:
     """Data processor using sentiment model"""
-    def __init__(self, models_dir='models_h5_fixed'):
+    def __init__(self, models_dir=None):
+        if models_dir is None:
+            models_dir = app.config['MODELS_FOLDER']
         self.models_dir = models_dir
         self.sentiment_analyzer = None
         self.load_models()
@@ -798,20 +855,20 @@ class DataProcessor:
         """Load sentiment model"""
         try:
             self.sentiment_analyzer = SmartEnsembleH5Fixed(self.models_dir)
-            print("✅ Sentiment analyzer loaded")
+            log_info("Sentiment analyzer loaded")
         except Exception as e:
-            print(f"Error loading models: {e}")
+            log_error(f"Error loading models: {e}")
             self.sentiment_analyzer = None
     
     def load_data(self, file_path):
         """Load data from CSV"""
         try:
-            print(f"📂 Loading data from: {file_path}")
+            log_info(f"Loading data from: {file_path}")
             df = pd.read_csv(file_path)
-            print(f"✅ Loaded {len(df)} rows")
+            log_info(f"Loaded {len(df)} rows")
             return df
         except Exception as e:
-            print(f"❌ Error loading data: {e}")
+            log_error(f"Error loading data: {e}")
             raise
     
     def clean_text(self, text):
@@ -839,17 +896,17 @@ class DataProcessor:
     
     def process_reviews(self, df):
         """Process reviews"""
-        print("🔄 Processing reviews...")
+        log_info("Processing reviews...")
         
         try:
             df_processed = df.copy()
             
             # Clean text
-            print("🧹 Cleaning text...")
+            log_info("Cleaning text...")
             df_processed['cleaned_text'] = df_processed['review_text'].apply(self.clean_text)
             
             # Get sentiment
-            print("🎯 Analyzing sentiment...")
+            log_info("Analyzing sentiment...")
             if self.sentiment_analyzer:
                 texts = df_processed['cleaned_text'].tolist()
                 results = self.sentiment_analyzer.predict_batch(texts, batch_size=100)
@@ -870,11 +927,11 @@ class DataProcessor:
             if 'visit_time' not in df_processed.columns:
                 df_processed['visit_time'] = 'Tidak diketahui'
             
-            print(f"✅ Processed {len(df_processed)} reviews")
+            log_info(f"Processed {len(df_processed)} reviews")
             return df_processed
             
         except Exception as e:
-            print(f"❌ Error processing: {e}")
+            log_error(f"Error processing: {e}")
             df_processed = df.copy()
             df_processed['sentiment'] = 'neutral'
             df_processed['cleaned_text'] = df_processed['review_text'].apply(self.clean_text)
@@ -942,7 +999,7 @@ class DataProcessor:
                     else:
                         metrics['top_wisata'] = {}
                 except Exception as e:
-                    print(f"Error calculating top wisata: {e}")
+                    log_error(f"Error calculating top wisata: {e}")
                     metrics['top_wisata'] = {}
             else:
                 metrics['top_wisata'] = {}
@@ -961,12 +1018,12 @@ class DataProcessor:
             return metrics
             
         except Exception as e:
-            print(f"Error calculating metrics: {e}")
+            log_error(f"Error calculating metrics: {e}")
             # Return default metrics with overall_satisfaction as float
             return {
                 'total_reviews': 0,
                 'avg_rating': 0.0,
-                'overall_satisfaction': 0.0,  # FIXED: Ensure this is a float
+                'overall_satisfaction': 0.0,
                 'rating_distribution': {},
                 'sentiment_distribution': {},
                 'positive_percentage': 0.0,
@@ -982,7 +1039,9 @@ class DataProcessor:
 
 class SatisfactionPredictor:
     """Satisfaction predictor"""
-    def __init__(self, models_dir='models_h5_fixed'):
+    def __init__(self, models_dir=None):
+        if models_dir is None:
+            models_dir = app.config['MODELS_FOLDER']
         self.models_dir = models_dir
         self.sentiment_analyzer = None
         self.is_trained = False
@@ -993,10 +1052,10 @@ class SatisfactionPredictor:
         try:
             self.sentiment_analyzer = SmartEnsembleH5Fixed(self.models_dir)
             self.is_trained = True
-            print("✅ Predictor model loaded")
+            log_info("Predictor model loaded")
             return True
         except Exception as e:
-            print(f"Error loading predictor: {e}")
+            log_error(f"Error loading predictor: {e}")
             return False
     
     def train(self, df, force_retrain=False):
@@ -1049,7 +1108,7 @@ class SatisfactionPredictor:
             }
             
         except Exception as e:
-            print(f"Prediction error: {e}")
+            log_error(f"Prediction error: {e}")
             return {
                 'prediction': 'satisfied',
                 'confidence': 0.6,
@@ -1063,7 +1122,7 @@ def generate_analysis_data(df_processed):
         if df_processed is None or df_processed.empty:
             return create_empty_analysis_data()
         
-        print("📊 Generating analysis data...")
+        log_info("Generating analysis data...")
         
         # Add visitor insights
         visitor_insights = analyze_visitor_patterns(df_processed)
@@ -1079,7 +1138,7 @@ def generate_analysis_data(df_processed):
         }
         
     except Exception as e:
-        print(f"Error generating analysis: {e}")
+        log_error(f"Error generating analysis: {e}")
         return create_empty_analysis_data()
 
 def create_empty_analysis_data():
@@ -1236,7 +1295,7 @@ def analyze_all_wisata(df):
         }
         
     except Exception as e:
-        print(f"Error analyzing wisata: {e}")
+        log_error(f"Error analyzing wisata: {e}")
         return {
             'total_destinations': 0,
             'urgent_count': 0,
@@ -1292,7 +1351,7 @@ def analyze_visitor_patterns(df):
         return insights
         
     except Exception as e:
-        print(f"Error analyzing visitor patterns: {e}")
+        log_error(f"Error analyzing visitor patterns: {e}")
         return {
             'review_length_analysis': {'short_reviews': 0, 'medium_reviews': 0, 'long_reviews': 0},
             'length_rating_correlation': 0,
@@ -1375,7 +1434,7 @@ def create_charts():
                     }
                 })
             except Exception as e:
-                print(f"Error creating top rating chart: {e}")
+                log_error(f"Error creating top rating chart: {e}")
         
         # Top 10 Wisata by Visits
         if 'wisata' in df_processed.columns:
@@ -1405,12 +1464,12 @@ def create_charts():
                     }
                 })
             except Exception as e:
-                print(f"Error creating top visits chart: {e}")
+                log_error(f"Error creating top visits chart: {e}")
         
         return charts
         
     except Exception as e:
-        print(f"Error creating charts: {e}")
+        log_error(f"Error creating charts: {e}")
         return charts
 
 # Flask helper functions
@@ -1431,7 +1490,7 @@ def allowed_file(filename):
 
 def get_data_info():
     try:
-        data_path = os.path.join(app.config['UPLOAD_FOLDER'], 'combined_batu_tourism_reviews_cleaned.csv')
+        data_path = get_data_path()
         if os.path.exists(data_path):
             file_stats = os.stat(data_path)
             return {
@@ -1447,11 +1506,11 @@ def initialize_app(force_retrain=False):
     global df_processed, metrics, model_results, current_data_info
     
     try:
-        print("🚀 Initializing application...")
+        log_info("Initializing application...")
         
-        data_path = os.path.join(app.config['UPLOAD_FOLDER'], 'combined_batu_tourism_reviews_cleaned.csv')
+        data_path = get_data_path()
         if not os.path.exists(data_path):
-            print(f"⚠️ Data file not found")
+            log_error(f"Data file not found")
             return False
         
         proc = get_processor()
@@ -1472,11 +1531,11 @@ def initialize_app(force_retrain=False):
         
         current_data_info = get_data_info()
         
-        print("✅ App initialized successfully!")
+        log_info("App initialized successfully!")
         return True
         
     except Exception as e:
-        print(f"❌ Error initializing: {e}")
+        log_error(f"Error initializing: {e}")
         return False
 
 # FIXED: Create CSV template
@@ -1504,7 +1563,7 @@ def create_csv_template():
         return template_path
         
     except Exception as e:
-        print(f"Error creating template: {e}")
+        log_error(f"Error creating template: {e}")
         return None
 
 # Flask routes
@@ -1530,7 +1589,7 @@ def dashboard():
                             data_info=current_data_info)
                             
     except Exception as e:
-        print(f"Dashboard error: {e}")
+        log_error(f"Dashboard error: {e}")
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('upload_page'))
 
@@ -1557,7 +1616,7 @@ def predict():
         })
         
     except Exception as e:
-        print(f"Prediction error: {e}")
+        log_error(f"Prediction error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/analysis')
@@ -1575,7 +1634,7 @@ def analysis():
         return render_template('analysis.html', analysis_data=analysis_data)
         
     except Exception as e:
-        print(f"Analysis error: {e}")
+        log_error(f"Analysis error: {e}")
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
@@ -1620,7 +1679,7 @@ def upload_file():
                     return redirect(url_for('upload_page'))
                 
                 # Save as standard filename for processing
-                standard_path = os.path.join(app.config['UPLOAD_FOLDER'], 'combined_batu_tourism_reviews_cleaned.csv')
+                standard_path = get_data_path()
                 df.to_csv(standard_path, index=False)
                 
                 # Clean up temporary file if different
@@ -1641,7 +1700,7 @@ def upload_file():
                     return redirect(url_for('upload_page'))
                 
             except Exception as e:
-                print(f"Error processing file: {e}")
+                log_error(f"Error processing file: {e}")
                 flash(f'Error processing file: {str(e)}', 'error')
                 if os.path.exists(upload_path):
                     os.remove(upload_path)
@@ -1652,7 +1711,7 @@ def upload_file():
             return redirect(url_for('upload_page'))
             
     except Exception as e:
-        print(f"Upload error: {e}")
+        log_error(f"Upload error: {e}")
         flash(f'Upload failed: {str(e)}', 'error')
         return redirect(url_for('upload_page'))
 
@@ -1674,7 +1733,7 @@ def download_template():
             return redirect(url_for('upload_page'))
             
     except Exception as e:
-        print(f"Template download error: {e}")
+        log_error(f"Template download error: {e}")
         flash(f'Error downloading template: {str(e)}', 'error')
         return redirect(url_for('upload_page'))
 
@@ -1738,7 +1797,7 @@ def api_filter_data():
         })
         
     except Exception as e:
-        print(f"Filter API error: {e}")
+        log_error(f"Filter API error: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -1819,49 +1878,79 @@ def api_quadrant_data_filtered():
         })
         
     except Exception as e:
-        print(f"Quadrant API error: {e}")
+        log_error(f"Quadrant API error: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
         })
 
+# Health check endpoint for monitoring
 @app.route('/health')
 def health_check():
-    return jsonify({
-        'status': 'healthy',
-        'timestamp': datetime.now().isoformat()
-    }), 200
+    """Health check endpoint"""
+    try:
+        # Check if models exist
+        models_exist = all([
+            os.path.exists(get_model_path('tfidf_lr_model.h5')),
+            os.path.exists(get_model_path('random_forest_model.h5')),
+            os.path.exists(get_model_path('lstm_model.h5')),
+            os.path.exists(get_model_path('label_encoder.h5'))
+        ])
+        
+        # Check if data file exists
+        data_exists = os.path.exists(get_data_path())
+        
+        status = {
+            'status': 'healthy' if models_exist and data_exists else 'unhealthy',
+            'models_loaded': models_exist,
+            'data_loaded': data_exists,
+            'timestamp': datetime.now().isoformat(),
+            'environment': os.environ.get('FLASK_ENV', 'development')
+        }
+        
+        return jsonify(status), 200 if status['status'] == 'healthy' else 503
+        
+    except Exception as e:
+        log_error(f"Health check failed: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
+# Error handlers
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('404.html'), 404
 
 @app.errorhandler(500)
 def internal_error(error):
+    log_error(f"Internal server error: {error}")
     return render_template('500.html'), 500
+
+@app.errorhandler(413)
+def too_large(error):
+    flash('File too large. Maximum size is 50MB.', 'error')
+    return redirect(url_for('upload_page'))
 
 if __name__ == '__main__':
     try:
-        # Create directories
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        os.makedirs('models_h5_fixed', exist_ok=True)
-        
-        print("📁 Directories created")
-        
         port = int(os.environ.get('PORT', 5000))
         
-        # Initialize app
-        print("🚀 Initializing app...")
-        if initialize_app():
-            print("✅ App initialized successfully!")
+        if os.environ.get('FLASK_ENV') == 'production':
+            print("🚀 Production mode - use Gunicorn to run this application")
+            print(f"   gunicorn -c gunicorn.conf.py wsgi:app")
         else:
-            print("⚠️ App initialization incomplete")
-        
-        print(f"🌐 Starting Flask app on port {port}")
-        print(f"🔗 Access at: http://localhost:{port}")
-        
-        app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
+            print(f"🔧 Development mode - running on port {port}")
+            
+            # Initialize app
+            log_info("Initializing app...")
+            if initialize_app():
+                log_info("App initialized successfully!")
+            else:
+                log_info("App initialization incomplete")
+            
+            log_info(f"Starting Flask app on port {port}")
+            log_info(f"Access at: http://localhost:{port}")
+            
+            app.run(debug=True, host='0.0.0.0', port=port, threaded=True)
         
     except Exception as e:
-        print(f"❌ Failed to start: {e}")
+        log_error(f"Failed to start: {e}")
         traceback.print_exc()

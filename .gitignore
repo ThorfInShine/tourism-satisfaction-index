@@ -26,3 +26,50 @@ Thumbs.db
 data/backups/
 data/temp/
 models/
+# Environment files
+.env
+.env.local
+.env.production
+secret_key.txt
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Data files
+data/backups/
+data/temp/
+*.sqlite
+*.db
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (if too large for git)
+models_h5_fixed/*.h5
+models/*.pkl
+models/*.joblib
+
+# Temporary files
+tmp/
+temp/
+cache/
