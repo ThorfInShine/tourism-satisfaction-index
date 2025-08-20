@@ -1,0 +1,75 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.mypy_cache/
+.DS_Store
+Thumbs.db
+data/backups/
+data/temp/
+models/
+# Environment files
+.env
+.env.local
+.env.production
+secret_key.txt
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Data files
+data/backups/
+data/temp/
+*.sqlite
+*.db
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (if too large for git)
+models_h5_fixed/*.h5
+models/*.pkl
+models/*.joblib
+
+# Temporary files
+tmp/
+temp/
+cache/

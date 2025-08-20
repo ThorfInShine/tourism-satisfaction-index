@@ -1,0 +1,2960 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Indeks Kepuasan Wisatawan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            --info-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --danger-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+            --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.12);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+            --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.20);
+            --border-radius: 16px;
+            --border-radius-lg: 24px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+            color: #2d3748;
+            padding-top: 80px;
+        }
+
+        /* ===== GLASSMORPHISM EFFECTS ===== */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* ===== MODERN NAVBAR WITH SCROLL EFFECT ===== */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            box-shadow: var(--shadow-sm);
+            padding: 1rem 0;
+            height: 80px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+        }
+
+        /* ===== NAVBAR SCROLL STATES ===== */
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar.scrolled .navbar-brand {
+            opacity: 0.9;
+        }
+
+        .navbar.scrolled .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .navbar.scrolled .nav-link:hover,
+        .navbar.scrolled .nav-link.active {
+            background: rgba(255, 255, 255, 0.2);
+            color: white !important;
+        }
+
+        .navbar.scrolled .navbar-toggler {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .navbar.scrolled .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.9%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: var(--transition);
+        }
+
+        .nav-link {
+            font-weight: 600;
+            color: #4a5568 !important;
+            padding: 0.75rem 1.5rem !important;
+            border-radius: 50px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: var(--primary-gradient);
+            color: white !important;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .modern-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: modernSpin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes modernSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero-section {
+            background: var(--primary-gradient);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            color: white;
+        }
+
+        .hero-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .hero-subtitle {
+            font-size: 1rem;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 0;
+        }
+
+        /* ===== MODERN FILTER CONTAINER ===== */
+        .filter-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .filter-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .filter-title {
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .filter-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-label {
+            color: #4a5568;
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
+        /* ===== MODERN DROPDOWN ===== */
+        .modern-select {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 50px;
+            padding: 0.875rem 3rem 0.875rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #2d3748;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            min-width: 280px;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 1rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+        }
+
+        .modern-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .modern-select:hover {
+            border-color: #cbd5e0;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .modern-select option {
+            background: white;
+            color: #2d3748;
+            padding: 1rem;
+            font-weight: 600;
+        }
+
+        /* ===== ACTIVE FILTER INDICATOR ===== */
+        .filter-indicator {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: var(--shadow-md);
+            border-left: 4px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .filter-indicator::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .filter-indicator.high {
+            background: var(--success-gradient);
+        }
+
+        .filter-indicator.medium {
+            background: var(--warning-gradient);
+        }
+
+        .filter-indicator.low {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+
+        /* ===== MODERN METRICS CARDS ===== */
+        .metrics-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+            min-height: 160px;
+        }
+
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .metric-card.success::before {
+            background: var(--success-gradient);
+        }
+
+        .metric-card.info::before {
+            background: var(--info-gradient);
+        }
+
+        .metric-card.warning::before {
+            background: var(--warning-gradient);
+        }
+
+        .metric-card.danger::before {
+            background: var(--danger-gradient);
+        }
+
+        .metric-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .metric-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            color: white;
+            font-size: 1.25rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .metric-card.success .metric-icon {
+            background: var(--success-gradient);
+        }
+
+        .metric-card.info .metric-icon {
+            background: var(--info-gradient);
+        }
+
+        .metric-card.warning .metric-icon {
+            background: var(--warning-gradient);
+        }
+
+        .metric-card.danger .metric-icon {
+            background: var(--danger-gradient);
+        }
+
+        .metric-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.875rem;
+            font-weight: 800;
+            color: #1a202c;
+            margin-bottom: 0.75rem;
+            line-height: 1;
+        }
+
+        .metric-progress {
+            height: 4px;
+            background: #f7fafc;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-progress-bar {
+            height: 100%;
+            background: var(--primary-gradient);
+            border-radius: 2px;
+            transition: width 1s ease-in-out;
+        }
+
+        .metric-card.success .metric-progress-bar {
+            background: var(--success-gradient);
+        }
+
+        .metric-card.info .metric-progress-bar {
+            background: var(--info-gradient);
+        }
+
+        .metric-card.warning .metric-progress-bar {
+            background: var(--warning-gradient);
+        }
+
+        .metric-card.danger .metric-progress-bar {
+            background: var(--danger-gradient);
+        }
+
+        .metric-change {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+
+        /* ===== MODERN CHART CARDS ===== */
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+            margin-bottom: 2rem;
+            transition: var(--transition);
+        }
+
+        .chart-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .chart-header {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            position: relative;
+        }
+
+        .chart-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary-gradient);
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* ===== IMPROVED CHART MARGINS ===== */
+        .chart-container {
+            height: 480px;  /* Increased from 450px */
+            width: 100%;
+            padding: 1rem;
+            padding-bottom: 2.5rem;  /* Extra space for labels */
+            overflow: visible;
+        }
+
+        .chart-container-large {
+            height: 680px;  /* Increased from 650px */
+            width: 100%;
+            position: relative;
+            padding: 1rem;
+            padding-bottom: 2.5rem;  /* Extra space for labels */
+            overflow: visible;
+        }
+
+        /* ===== COMPLAINT ANALYSIS STYLES ===== */
+        .complaint-analysis-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            min-height: 400px;
+        }
+
+        .complaint-list {
+            background: rgba(248, 250, 252, 0.5);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+        }
+
+        .complaint-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .complaint-list-title {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #dc2626;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .complaint-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            flex-wrap: wrap;
+        }
+
+        .complaint-stat {
+            background: rgba(220, 38, 38, 0.1);
+            color: #dc2626;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+        }
+
+        .complaint-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            border-left: 4px solid;
+        }
+
+        .complaint-item:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .complaint-item.high {
+            border-left-color: #dc2626;
+        }
+
+        .complaint-item.medium {
+            border-left-color: #f59e0b;
+        }
+
+        .complaint-item.low {
+            border-left-color: #6b7280;
+        }
+
+        .complaint-rank {
+            background: #dc2626;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .complaint-details {
+            flex: 1;
+        }
+
+        .complaint-keyword {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 0.25rem;
+            text-transform: capitalize;
+        }
+
+        .complaint-frequency {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .complaint-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .complaint-example {
+            background: rgba(220, 38, 38, 0.1);
+            color: #dc2626;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .complaint-metrics {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.5rem;
+        }
+
+        .complaint-count {
+            background: #dc2626;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .complaint-percentage {
+            background: rgba(220, 38, 38, 0.1);
+            color: #dc2626;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .complaint-insights {
+            background: rgba(248, 250, 252, 0.5);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+        }
+
+        .insights-header {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #0ea5e9;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .insight-item {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow-sm);
+            border-left: 4px solid;
+            transition: var(--transition);
+        }
+
+        .insight-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .insight-item.success {
+            border-left-color: #10b981;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .insight-item.warning {
+            border-left-color: #f59e0b;
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        }
+
+        .insight-item.danger {
+            border-left-color: #ef4444;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        }
+
+        .insight-item.info {
+            border-left-color: #3b82f6;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        }
+
+        .insight-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .insight-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            color: white;
+        }
+
+        .insight-item.success .insight-icon {
+            background: #10b981;
+        }
+
+        .insight-item.warning .insight-icon {
+            background: #f59e0b;
+        }
+
+        .insight-item.danger .insight-icon {
+            background: #ef4444;
+        }
+
+        .insight-item.info .insight-icon {
+            background: #3b82f6;
+        }
+
+        .insight-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .insight-item.success .insight-title {
+            color: #065f46;
+        }
+
+        .insight-item.warning .insight-title {
+            color: #92400e;
+        }
+
+        .insight-item.danger .insight-title {
+            color: #991b1b;
+        }
+
+        .insight-item.info .insight-title {
+            color: #1e40af;
+        }
+
+        .insight-description {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .insight-item.success .insight-description {
+            color: #047857;
+        }
+
+        .insight-item.warning .insight-description {
+            color: #a16207;
+        }
+
+        .insight-item.danger .insight-description {
+            color: #b91c1c;
+        }
+
+        .insight-item.info .insight-description {
+            color: #2563eb;
+        }
+
+        .trend-indicator {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid #f87171;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .trend-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #dc2626;
+            margin-bottom: 0.5rem;
+        }
+
+        .trend-label {
+            font-size: 0.875rem;
+            color: #991b1b;
+            font-weight: 600;
+        }
+
+        .no-complaints {
+            text-align: center;
+            padding: 3rem;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-radius: var(--border-radius);
+            border: 2px solid #22c55e;
+        }
+
+        .no-complaints-icon {
+            font-size: 4rem;
+            color: #22c55e;
+            margin-bottom: 1rem;
+        }
+
+        .no-complaints-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 0.5rem;
+        }
+
+        .no-complaints-desc {
+            color: #15803d;
+            font-size: 1rem;
+        }
+
+        /* ===== ENHANCED QUADRANT LEGEND ===== */
+        .quadrant-legend {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            min-width: 300px;
+        }
+
+        .legend-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            text-align: center;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border-radius: 12px;
+            transition: var(--transition);
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+        }
+
+        .legend-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(4px);
+        }
+
+        .legend-item.active {
+            background: rgba(102, 126, 234, 0.15);
+            transform: translateX(8px);
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin-right: 1rem;
+            box-shadow: var(--shadow-sm);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .legend-text {
+            flex: 1;
+        }
+
+        .legend-label {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .legend-description {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        /* ===== QUADRANT COLORS ===== */
+        .legend-color.kuadran-1 {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .legend-color.kuadran-2 {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .legend-color.kuadran-3 {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        .legend-color.kuadran-4 {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        /* ===== WISATA INFO POPUP ===== */
+        .wisata-popup {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-xl);
+            z-index: 1000;
+            max-width: 320px;
+            min-width: 280px;
+            display: none;
+            animation: popupSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes popupSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .popup-header {
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.75rem;
+        }
+
+        .popup-stats {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .popup-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+
+        .popup-stat-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .popup-stat-value {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 1rem;
+        }
+
+        .popup-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #6b7280;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .popup-close:hover {
+            background: #f3f4f6;
+            color: #ef4444;
+        }
+
+        /* ===== QUADRANT LABELS ===== */
+        .quadrant-label {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.875rem;
+            box-shadow: var(--shadow-md);
+            pointer-events: none;
+            z-index: 1001;
+            transition: var(--transition);
+            opacity: 0;
+            transform: scale(0.8);
+            border: 2px solid;
+        }
+
+        .quadrant-label.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .quadrant-label.kuadran-1 {
+            border-color: #10b981;
+            color: #065f46;
+        }
+
+        .quadrant-label.kuadran-2 {
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+
+        .quadrant-label.kuadran-3 {
+            border-color: #ef4444;
+            color: #991b1b;
+        }
+
+        .quadrant-label.kuadran-4 {
+            border-color: #3b82f6;
+            color: #1e40af;
+        }
+
+        /* ===== CLICK INFO ===== */
+        .click-info {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: var(--border-radius);
+            padding: 1rem 1.5rem;
+            font-size: 0.875rem;
+            color: #92400e;
+            text-align: center;
+            font-weight: 600;
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            max-width: 280px;
+            z-index: 999;
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ===== DATA INFO FOOTER ===== */
+        .data-info-footer {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            margin-top: 3rem;
+            border-left: 4px solid #3b82f6;
+            box-shadow: var(--shadow-md);
+        }
+
+        .data-info-title {
+            color: #1e40af;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            font-size: 1.25rem;
+        }
+
+        .data-update-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+
+        .data-update-info:hover {
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+        }
+
+        .data-update-info i {
+            color: #2563eb;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .data-update-label {
+            font-weight: 600;
+            color: #1e40af;
+            margin-right: 1rem;
+            font-size: 1.125rem;
+        }
+
+        .data-update-value {
+            color: #374151;
+            font-weight: 500;
+            font-size: 1.125rem;
+        }
+
+        /* ===== RESPONSIVE COMPLAINT ANALYSIS ===== */
+        @media (max-width: 1200px) {
+            .complaint-analysis-container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-top: 70px;
+            }
+
+            .navbar {
+                height: 70px;
+            }
+
+            .hero-title {
+                font-size: 1.75rem;
+            }
+
+            .hero-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .filter-content {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .modern-select {
+                min-width: 100%;
+            }
+
+            .metrics-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .metric-value {
+                font-size: 1.5rem;
+            }
+
+            .data-update-info {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.5rem;
+            }
+
+            .data-update-info i {
+                margin-right: 0;
+                margin-bottom: 0.5rem;
+            }
+
+            .data-update-label {
+                margin-right: 0;
+                margin-bottom: 0.25rem;
+            }
+
+            .complaint-list,
+            .complaint-insights {
+                padding: 1rem;
+            }
+            
+            .complaint-list-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .complaint-stats {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .complaint-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .complaint-rank {
+                align-self: flex-start;
+            }
+            
+            .insight-item {
+                padding: 1rem;
+            }
+            
+            .trend-value {
+                font-size: 1.5rem;
+            }
+
+            /* ===== RESPONSIVE CHART FIXES ===== */
+            .chart-container {
+                height: 380px;  /* Increased from 350px */
+                padding: 0.5rem;
+                padding-bottom: 2rem;
+            }
+
+            .chart-container-large {
+                height: 480px;  /* Increased from 450px */
+                padding: 0.5rem;
+                padding-bottom: 2rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .metrics-container {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-container {
+                padding: 1.5rem;
+            }
+
+            .metric-card {
+                padding: 1.5rem;
+                min-height: 130px;
+            }
+
+            .chart-container {
+                height: 350px;
+                padding: 0.5rem;
+                padding-bottom: 1.5rem;
+            }
+
+            .chart-container-large {
+                height: 450px;
+                padding: 0.5rem;
+                padding-bottom: 1.5rem;
+            }
+        }
+
+        /* ===== CONTAINER IMPROVEMENTS ===== */
+        .container-fluid {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+
+        /* ===== SECTION SPACING ===== */
+        .section {
+            margin-bottom: 3rem;
+        }
+
+        /* ===== COMPLAINT SECTION POSITIONING ===== */
+        #complaintSection {
+            margin-top: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        /* ===== ENHANCED ANIMATIONS ===== */
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-up {
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== SCROLL INDICATOR ===== */
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transform-origin: left;
+            transform: scaleX(0);
+            z-index: 1031;
+            transition: transform 0.1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll Progress Indicator -->
+    <div class="scroll-indicator" id="scrollIndicator"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="modern-spinner"></div>
+            <p class="mt-3 fw-semibold">Memuat dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Modern Navbar with Scroll Effect -->
+    <nav class="navbar navbar-expand-lg" id="mainNavbar">
+        <div class="container">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="fas fa-chart-line me-2"></i>Tourism Analytics
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link active" href="/dashboard">
+                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                    </a>
+                    <a class="nav-link" href="/analysis">
+                        <i class="fas fa-chart-bar me-1"></i>Analisis
+                    </a>
+                    <a class="nav-link" href="/admin">
+                        <i class="fas fa-cog me-1"></i>Admin Panel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="hero-content fade-in">
+                <h1 class="hero-title">
+                    <i class="fas fa-mountain me-3"></i>
+                    Dashboard Kepuasan Wisatawan
+                </h1>
+                <p class="hero-subtitle">
+                    Analisis Real-time Indeks Kepuasan Wisatawan Kota Batu
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <div class="container-fluid">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show slide-up" role="alert">
+                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'info-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Modern Filter Container -->
+        <div class="filter-container fade-in">
+            <h4 class="filter-title">
+                <i class="fas fa-filter"></i>
+                Filter Berdasarkan Tingkat Kunjungan
+            </h4>
+            <div class="filter-content">
+                <div class="filter-label">
+                    <i class="fas fa-layer-group"></i>
+                    Pilih Filter:
+                </div>
+                <select class="modern-select" id="filterSelect">
+                    <option value="all" selected>🌍 Semua Kunjungan</option>
+                    <option value="high">⬆️ Kunjungan Tinggi</option>
+                    <option value="medium">➖ Kunjungan Sedang</option>
+                    <option value="low">⬇️ Kunjungan Rendah</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Active Filter Indicator -->
+        <div class="filter-indicator all slide-up" id="activeFilterIndicator">
+            <i class="fas fa-globe me-2"></i>
+            <span id="activeFilterText">Menampilkan: Semua Kunjungan - Seluruh destinasi wisata</span>
+        </div>
+        
+        <!-- Modern Metrics Cards -->
+        <div class="metrics-container fade-in">
+            <div class="metric-card primary">
+                <div class="metric-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="metric-title">Kepuasan Overall</div>
+                <div class="metric-value" id="overallSatisfaction">{{ "%.2f"|format(metrics.overall_satisfaction) }}</div>
+                <div class="metric-progress">
+                    <div class="metric-progress-bar" id="overallProgress"
+                         style="width: {{ (metrics.overall_satisfaction / 5 * 100)|round }}%"></div>
+                </div>
+                <div class="metric-change">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>Skala 1-5</span>
+                </div>
+            </div>
+
+            <div class="metric-card info">
+                <div class="metric-icon">
+                    <i class="fas fa-comments"></i>
+                </div>
+                <div class="metric-title">Total Review</div>
+                <div class="metric-value" id="totalReviews">{{ "{:,}".format(metrics.total_reviews) }}</div>
+                <div class="metric-progress">
+                    <div class="metric-progress-bar" style="width: 95%"></div>
+                </div>
+                <div class="metric-change">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Ulasan Wisatawan</span>
+                </div>
+            </div>
+
+            <div class="metric-card success">
+                <div class="metric-icon">
+                    <i class="fas fa-thumbs-up"></i>
+                </div>
+                <div class="metric-title">Sentimen Positif</div>
+                <div class="metric-value" id="positivePercentage">{{ "%.1f"|format(metrics.positive_percentage) }}%</div>
+                <div class="metric-progress">
+                    <div class="metric-progress-bar" id="positiveProgress"
+                         style="width: {{ metrics.positive_percentage|round }}%"></div>
+                </div>
+                <div class="metric-change">
+                    <i class="fas fa-smile"></i>
+                    <span>Feedback Positif</span>
+                </div>
+            </div>
+
+            <div class="metric-card warning">
+                <div class="metric-icon">
+                    <i class="fas fa-minus"></i>
+                </div>
+                <div class="metric-title">Sentimen Netral</div>
+                <div class="metric-value" id="neutralPercentage">{{ "%.1f"|format(metrics.neutral_percentage) }}%</div>
+                <div class="metric-progress">
+                    <div class="metric-progress-bar" id="neutralProgress"
+                         style="width: {{ metrics.neutral_percentage|round }}%"></div>
+                </div>
+                <div class="metric-change">
+                    <i class="fas fa-meh"></i>
+                    <span>Feedback Netral</span>
+                </div>
+            </div>
+
+            <div class="metric-card danger">
+                <div class="metric-icon">
+                    <i class="fas fa-thumbs-down"></i>
+                </div>
+                <div class="metric-title">Sentimen Negatif</div>
+                <div class="metric-value" id="negativePercentage">{{ "%.1f"|format(metrics.negative_percentage) }}%</div>
+                <div class="metric-progress">
+                    <div class="metric-progress-bar" id="negativeProgress"
+                         style="width: {{ metrics.negative_percentage|round }}%"></div>
+                </div>
+                <div class="metric-change">
+                    <i class="fas fa-frown"></i>
+                    <span>Feedback Negatif</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Section -->
+        <section class="section">
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-card slide-up">
+                        <div class="chart-header">
+                            <h5 class="chart-title">
+                                <i class="fas fa-chart-bar text-primary"></i>
+                                Distribusi Rating
+                            </h5>
+                        </div>
+                        <div class="chart-container" id="ratingChart"></div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-card slide-up">
+                        <div class="chart-header">
+                            <h5 class="chart-title">
+                                <i class="fas fa-chart-pie text-success"></i>
+                                Distribusi Sentimen
+                            </h5>
+                        </div>
+                        <div class="chart-container" id="sentimentChart"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Top Charts Section - ONLY FOR 'ALL' FILTER -->
+        <section class="section" id="topChartsSection">
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-card slide-up">
+                        <div class="chart-header">
+                            <h5 class="chart-title">
+                                <i class="fas fa-trophy text-warning"></i>
+                                Top 10 Rating Tertinggi
+                            </h5>
+                        </div>
+                        <div class="chart-container" id="topRatingChart"></div>
+                    </div>
+                </div>
+                <div class="col-lg-6 mb-4">
+                    <div class="chart-card slide-up">
+                        <div class="chart-header">
+                            <h5 class="chart-title">
+                                <i class="fas fa-users text-info"></i>
+                                Top 10 Kunjungan Terbanyak
+                            </h5>
+                        </div>
+                        <div class="chart-container" id="topVisitChart"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Complaint Analysis Section - SHOW FOR ALL FILTERS -->
+        <section class="section" id="complaintSection">
+            <div class="chart-card slide-up">
+                <div class="chart-header">
+                    <h5 class="chart-title">
+                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                        <span id="complaintTitle">Analisis Keluhan Utama</span>
+                    </h5>
+                    <p class="mb-0 text-muted" style="font-size: 0.875rem;" id="complaintSubtitle">
+                        Keyword negatif yang paling sering muncul dalam review wisatawan
+                    </p>
+                </div>
+                <div class="position-relative">
+                    <div id="complaintAnalysisContent" class="p-4">
+                        <!-- Content will be loaded dynamically -->
+                        <div class="text-center">
+                            <div class="modern-spinner"></div>
+                            <p class="mt-3 text-muted">Memuat analisis keluhan...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quadrant Analysis Section - ONLY SHOW FOR 'ALL' FILTER -->
+        <section class="section" id="quadrantSection">
+            <div class="chart-card slide-up">
+                <div class="chart-header">
+                    <h5 class="chart-title">
+                        <i class="fas fa-th text-danger"></i>
+                        <span id="quadrantTitle">Analisis Kuadran: Rating vs Jumlah Kunjungan</span>
+                    </h5>
+                    <p class="mb-0 text-muted" style="font-size: 0.875rem;" id="quadrantSubtitle">
+                        Posisi strategis wisata berdasarkan rating dan data kunjungan manual admin
+                    </p>
+                </div>
+                <div class="position-relative">
+                    <div id="quadrantChart" class="chart-container-large"></div>
+                    
+                    <!-- Enhanced Legend -->
+                    <div class="quadrant-legend" id="quadrantLegend">
+                        <h6 class="legend-title" id="legendTitle">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Interpretasi Kuadran
+                        </h6>
+                        <div id="legendContent">
+                            <!-- Legend content will be updated dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Wisata Info Popup -->
+                    <div id="wisataInfoPopup" class="wisata-popup">
+                        <button class="popup-close" onclick="closeWisataPopup()">&times;</button>
+                        <div class="popup-header" id="popupHeader">Nama Wisata</div>
+                        <div class="popup-stats">
+                            <div class="popup-stat">
+                                <span class="popup-stat-label">Rating Rata-rata:</span>
+                                <span class="popup-stat-value" id="popupRating">0.00</span>
+                            </div>
+                            <div class="popup-stat">
+                                <span class="popup-stat-label">Jumlah Kunjungan:</span>
+                                <span class="popup-stat-value" id="popupVisits">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quadrant Labels -->
+                    <div id="quadrantLabel1" class="quadrant-label kuadran-1">Kuadran I</div>
+                    <div id="quadrantLabel2" class="quadrant-label kuadran-2">Kuadran II</div>
+                    <div id="quadrantLabel3" class="quadrant-label kuadran-3">Kuadran III</div>
+                    <div id="quadrantLabel4" class="quadrant-label kuadran-4">Kuadran IV</div>
+                    
+                    <!-- Click Info -->
+                    <div class="click-info">
+                        <i class="fas fa-mouse-pointer me-2"></i>
+                        <strong>KLIK</strong> pada titik untuk detail wisata
+                        <br><small>Hover pada legend untuk highlight kuadran</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Information Footer -->
+        {% if data_info %}
+        <div class="data-info-footer fade-in">
+            <h5 class="data-info-title">
+                <i class="fas fa-database me-2"></i>
+                Informasi Dataset
+            </h5>
+            <div class="data-update-info">
+                <i class="fas fa-clock"></i>
+                <span class="data-update-label">Terakhir Diupdate:</span>
+                <span class="data-update-value">{{ data_info.modified }}</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let chartsLoaded = false;
+        let quadrantData = null;
+        let quadrantChart = null;
+        let plotlyClickHandled = false;
+        let quadrantBounds = null;
+        let plotElement = null;
+        let currentFilter = 'all';
+        let originalMetrics = null;
+        let visitLevelCounts = {};
+        let complaintData = null;
+
+        // Store original metrics
+        originalMetrics = {
+            overall_satisfaction: {{ metrics.overall_satisfaction }},
+            total_reviews: {{ metrics.total_reviews }},
+            positive_percentage: {{ metrics.positive_percentage }},
+            negative_percentage: {{ metrics.negative_percentage }},
+            neutral_percentage: {{ metrics.neutral_percentage }}
+        };
+
+        // ===== NAVBAR SCROLL EFFECT ===== 
+        function initializeScrollEffects() {
+            const navbar = document.getElementById('mainNavbar');
+            const scrollIndicator = document.getElementById('scrollIndicator');
+            let isScrolled = false;
+            let ticking = false;
+            
+            function updateNavbarOnScroll() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const heroHeight = document.querySelector('.hero-section')?.offsetHeight || 200;
+                
+                // Update scroll progress indicator
+                const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const scrollProgress = Math.min(scrollTop / documentHeight, 1);
+                if (scrollIndicator) {
+                    scrollIndicator.style.transform = `scaleX(${scrollProgress})`;
+                }
+                
+                // Update navbar transparency based on scroll position
+                const shouldBeScrolled = scrollTop > heroHeight * 0.3; // Start transition at 30% of hero height
+                
+                if (shouldBeScrolled && !isScrolled) {
+                    navbar.classList.add('scrolled');
+                    isScrolled = true;
+                    console.log('🔄 Navbar: Switched to transparent mode');
+                } else if (!shouldBeScrolled && isScrolled) {
+                    navbar.classList.remove('scrolled');
+                    isScrolled = false;
+                    console.log('🔄 Navbar: Switched to normal mode');
+                }
+                
+                ticking = false;
+            }
+            
+            function requestScrollUpdate() {
+                if (!ticking) {
+                    requestAnimationFrame(updateNavbarOnScroll);
+                    ticking = true;
+                }
+            }
+            
+            // Listen to scroll events
+            window.addEventListener('scroll', requestScrollUpdate, { passive: true });
+            
+            // Initial check
+            updateNavbarOnScroll();
+            
+            console.log('✅ Scroll effects initialized');
+        }
+
+        // Show loading overlay
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        // Hide loading overlay
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        // Update active filter indicator
+        function updateActiveFilterIndicator(filterType) {
+            const indicator = document.getElementById('activeFilterIndicator');
+            const text = document.getElementById('activeFilterText');
+            
+            // Remove all existing classes
+            indicator.classList.remove('all', 'high', 'medium', 'low');
+            
+            let iconClass = '';
+            let filterText = '';
+            let description = '';
+            
+            switch(filterType) {
+                case 'all':
+                    indicator.classList.add('all');
+                    iconClass = 'fas fa-globe';
+                    filterText = 'Semua Kunjungan';
+                    description = 'Seluruh destinasi wisata';
+                    break;
+                case 'high':
+                    indicator.classList.add('high');
+                    iconClass = 'fas fa-arrow-up';
+                    filterText = 'Kunjungan Tinggi';
+                    description = 'Destinasi dengan tingkat kunjungan tinggi';
+                    break;
+                case 'medium':
+                    indicator.classList.add('medium');
+                    iconClass = 'fas fa-minus';
+                    filterText = 'Kunjungan Sedang';
+                    description = 'Destinasi dengan tingkat kunjungan sedang';
+                    break;
+                case 'low':
+                    indicator.classList.add('low');
+                    iconClass = 'fas fa-arrow-down';
+                    filterText = 'Kunjungan Rendah';
+                    description = 'Destinasi dengan tingkat kunjungan rendah';
+                    break;
+            }
+            
+            // Update icon and text
+            indicator.innerHTML = `<i class="${iconClass} me-2"></i><span>Menampilkan: ${filterText} - ${description}</span>`;
+            
+            console.log('✅ Active filter indicator updated:', filterType);
+        }
+
+        // Close wisata popup
+        function closeWisataPopup() {
+            const popup = document.getElementById('wisataInfoPopup');
+            popup.style.display = 'none';
+            console.log('🔒 Popup closed');
+        }
+
+        // Show wisata popup with data - UPDATED LABELS
+        function showWisataPopup(pointIndex, x, y) {
+            console.log('🎯 showWisataPopup called with:', pointIndex, x, y);
+            
+            if (!quadrantData || !quadrantData.quadrant_data) {
+                console.error('❌ No quadrant data available');
+                return;
+            }
+            
+            const data = quadrantData.quadrant_data;
+            
+            if (!data.full_names || pointIndex >= data.full_names.length || pointIndex < 0) {
+                console.error('❌ Invalid point index or missing full_names:', pointIndex, data);
+                return;
+            }
+            
+            const fullName = data.full_names[pointIndex];
+            const rating = data.ratings[pointIndex];
+            const visits = data.visits[pointIndex];
+            
+            console.log('📊 Popup data:', { fullName, rating, visits });
+            
+            // Update popup content
+            const popupHeader = document.getElementById('popupHeader');
+            const popupRating = document.getElementById('popupRating');
+            const popupVisits = document.getElementById('popupVisits');
+            
+            if (popupHeader) popupHeader.textContent = fullName;
+            if (popupRating) popupRating.textContent = rating.toFixed(2);
+            if (popupVisits) popupVisits.textContent = visits.toLocaleString(); // Format dengan koma
+            
+            // Position popup
+            const popup = document.getElementById('wisataInfoPopup');
+            const chartContainer = document.getElementById('quadrantChart');
+            
+            if (!popup || !chartContainer) {
+                console.error('❌ Popup elements not found');
+                return;
+            }
+            
+            const containerRect = chartContainer.getBoundingClientRect();
+            
+            // Use provided coordinates or default values
+            let left = x || 100;
+            let top = y || 100;
+            
+            // Adjust if too close to edges
+            const popupWidth = 320;
+            const popupHeight = 180;
+            
+            if (left > containerRect.width - popupWidth) {
+                left = containerRect.width - popupWidth - 10;
+            }
+            if (top > containerRect.height - popupHeight) {
+                top = containerRect.height - popupHeight - 10;
+            }
+            if (left < 10) left = 10;
+            if (top < 10) top = 10;
+            
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            popup.style.display = 'block';
+            
+            console.log('✅ Popup shown at position:', left, top);
+        }
+
+        // Function to determine quadrant color based on position
+        function getQuadrantColor(rating, visits, avgRating, avgVisits) {
+            if (rating >= avgRating && visits >= avgVisits) {
+                return '#10b981'; // Kuadran I - Green (Kanan Atas)
+            } else if (rating >= avgRating && visits < avgVisits) {
+                return '#f59e0b'; // Kuadran II - Orange (Kiri Atas)
+            } else if (rating < avgRating && visits < avgVisits) {
+                return '#ef4444'; // Kuadran III - Red (Kiri Bawah)
+            } else {
+                return '#3b82f6'; // Kuadran IV - Blue (Kanan Bawah)
+            }
+        }
+
+        // Update metrics cards with animation
+        function updateMetricsCards(metrics) {
+            console.log('📊 Updating metrics cards:', metrics);
+            
+            // Update overall satisfaction
+            const overallSatisfaction = document.getElementById('overallSatisfaction');
+            const overallProgress = document.getElementById('overallProgress');
+            if (overallSatisfaction && metrics.overall_satisfaction !== undefined) {
+                animateValue(overallSatisfaction, parseFloat(overallSatisfaction.textContent), metrics.overall_satisfaction, 1000, 2);
+                if (overallProgress) {
+                    setTimeout(() => {
+                        overallProgress.style.width = `${(metrics.overall_satisfaction / 5 * 100).toFixed(0)}%`;
+                    }, 500);
+                }
+            }
+            
+            // Update total reviews
+            const totalReviews = document.getElementById('totalReviews');
+            if (totalReviews && metrics.total_reviews !== undefined) {
+                animateValue(totalReviews, parseInt(totalReviews.textContent.replace(/,/g, '')), metrics.total_reviews, 1000, 0, true);
+            }
+            
+            // Update positive percentage
+            const positivePercentage = document.getElementById('positivePercentage');
+            const positiveProgress = document.getElementById('positiveProgress');
+            if (positivePercentage && metrics.positive_percentage !== undefined) {
+                animateValue(positivePercentage, parseFloat(positivePercentage.textContent), metrics.positive_percentage, 1000, 1, false, '%');
+                if (positiveProgress) {
+                    setTimeout(() => {
+                        positiveProgress.style.width = `${metrics.positive_percentage.toFixed(0)}%`;
+                    }, 500);
+                }
+            }
+            
+            // Update neutral percentage
+            const neutralPercentage = document.getElementById('neutralPercentage');
+            const neutralProgress = document.getElementById('neutralProgress');
+            if (neutralPercentage && metrics.neutral_percentage !== undefined) {
+                animateValue(neutralPercentage, parseFloat(neutralPercentage.textContent), metrics.neutral_percentage, 1000, 1, false, '%');
+                if (neutralProgress) {
+                    setTimeout(() => {
+                        neutralProgress.style.width = `${metrics.neutral_percentage.toFixed(0)}%`;
+                    }, 500);
+                }
+            }
+            
+            // Update negative percentage
+            const negativePercentage = document.getElementById('negativePercentage');
+            const negativeProgress = document.getElementById('negativeProgress');
+            if (negativePercentage && metrics.negative_percentage !== undefined) {
+                animateValue(negativePercentage, parseFloat(negativePercentage.textContent), metrics.negative_percentage, 1000, 1, false, '%');
+                if (negativeProgress) {
+                    setTimeout(() => {
+                        negativeProgress.style.width = `${metrics.negative_percentage.toFixed(0)}%`;
+                    }, 500);
+                }
+            }
+        }
+
+        // Animate value changes
+        function animateValue(element, start, end, duration, decimals = 0, useCommas = false, suffix = '') {
+            const range = end - start;
+            const increment = range / (duration / 16);
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    current = end;
+                    clearInterval(timer);
+                }
+                
+                let displayValue = current.toFixed(decimals);
+                if (useCommas) {
+                    displayValue = parseInt(current).toLocaleString();
+                }
+                element.textContent = displayValue + suffix;
+            }, 16);
+        }
+
+        // Update chart titles and legends based on filter - UPDATED
+        function updateChartTitlesAndLegend(filterType) {
+            const quadrantTitle = document.getElementById('quadrantTitle');
+            const quadrantSubtitle = document.getElementById('quadrantSubtitle');
+            const legendTitle = document.getElementById('legendTitle');
+            const legendContent = document.getElementById('legendContent');
+            
+            // HANYA UPDATE JIKA FILTER 'ALL'
+            if (filterType === 'all') {
+                const titleText = 'Analisis Kuadran: Rating vs Jumlah Kunjungan';
+                const subtitleText = 'Posisi strategis wisata berdasarkan rating dan data kunjungan manual admin';
+                const legendTitleText = 'Interpretasi Kuadran';
+                const legendHTML = getQuadrantLegendHTML();
+                
+                if (quadrantTitle) quadrantTitle.textContent = titleText;
+                if (quadrantSubtitle) quadrantSubtitle.textContent = subtitleText;
+                if (legendTitle) legendTitle.innerHTML = `<i class="fas fa-info-circle me-2"></i>${legendTitleText}`;
+                if (legendContent) legendContent.innerHTML = legendHTML;
+                
+                // Show quadrant section
+                const quadrantSection = document.getElementById('quadrantSection');
+                if (quadrantSection) quadrantSection.style.display = 'block';
+            } else {
+                // Hide quadrant section for filtered views
+                const quadrantSection = document.getElementById('quadrantSection');
+                if (quadrantSection) quadrantSection.style.display = 'none';
+            }
+        }
+
+        // Get quadrant legend HTML - UPDATED DESCRIPTIONS
+        function getQuadrantLegendHTML() {
+            return `
+                <div class="legend-item" data-quadrant="1">
+                    <div class="legend-color kuadran-1"></div>
+                    <div class="legend-text">
+                        <div class="legend-label">Kuadran I (Kanan Atas)</div>
+                        <div class="legend-description">Rating Tinggi + Kunjungan Tinggi</div>
+                    </div>
+                </div>
+                
+                <div class="legend-item" data-quadrant="2">
+                    <div class="legend-color kuadran-2"></div>
+                    <div class="legend-text">
+                        <div class="legend-label">Kuadran II (Kiri Atas)</div>
+                        <div class="legend-description">Rating Tinggi + Kunjungan Rendah</div>
+                    </div>
+                </div>
+                
+                <div class="legend-item" data-quadrant="3">
+                    <div class="legend-color kuadran-3"></div>
+                    <div class="legend-text">
+                        <div class="legend-label">Kuadran III (Kiri Bawah)</div>
+                        <div class="legend-description">Rating Rendah + Kunjungan Rendah</div>
+                    </div>
+                </div>
+                
+                <div class="legend-item" data-quadrant="4">
+                    <div class="legend-color kuadran-4"></div>
+                    <div class="legend-text">
+                        <div class="legend-label">Kuadran IV (Kanan Bawah)</div>
+                        <div class="legend-description">Rating Rendah + Kunjungan Tinggi</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show/hide charts based on filter - UPDATED untuk complaint section
+        function toggleChartsVisibility(filterType) {
+            const topChartsSection = document.getElementById('topChartsSection');
+            const quadrantSection = document.getElementById('quadrantSection');
+            const complaintSection = document.getElementById('complaintSection');
+            
+            if (filterType === 'all') {
+                // Show all sections for 'all' filter
+                if (topChartsSection) topChartsSection.style.display = 'block';
+                if (quadrantSection) quadrantSection.style.display = 'block';
+                if (complaintSection) complaintSection.style.display = 'block';
+            } else {
+                // Hide top charts and quadrant, but show complaint analysis for filtered views
+                if (topChartsSection) topChartsSection.style.display = 'none';
+                if (quadrantSection) quadrantSection.style.display = 'none';
+                if (complaintSection) complaintSection.style.display = 'block';
+            }
+            
+            console.log(`📊 Charts visibility - Filter: ${filterType}`);
+            console.log(`   - Top Charts: ${filterType === 'all' ? 'shown' : 'hidden'}`);
+            console.log(`   - Quadrant: ${filterType === 'all' ? 'shown' : 'hidden'}`);
+            console.log(`   - Complaint Analysis: shown`);
+        }
+
+        // Apply filter from dropdown - UPDATED dengan complaint analysis
+        function applyFilterFromDropdown(filterType) {
+            console.log('🔍 Applying filter from dropdown:', filterType);
+            showLoading();
+            currentFilter = filterType;
+            
+            // Update active filter indicator
+            updateActiveFilterIndicator(filterType);
+            
+            // Show/hide charts based on filter
+            toggleChartsVisibility(filterType);
+            
+            // Update chart titles and legend
+            updateChartTitlesAndLegend(filterType);
+            
+            // Fetch filtered data
+            fetch(`/api/filter_data?filter=${filterType}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📊 Filter data received:', data);
+                    
+                    if (data.success) {
+                        // Update metrics
+                        if (data.metrics) {
+                            updateMetricsCards(data.metrics);
+                        }
+                        
+                        // Update charts
+                        if (data.charts) {
+                            updateFilteredCharts(data.charts);
+                        }
+                        
+                        // Update quadrant chart only for 'all' filter
+                        if (filterType === 'all') {
+                            createFilteredQuadrantChart(filterType);
+                        }
+                        
+                        // Update complaint analysis
+                        updateComplaintAnalysis(filterType);
+                        
+                        // Update filter counts
+                        if (data.visit_level_counts) {
+                            updateFilterCounts(data.visit_level_counts);
+                        }
+                    } else {
+                        console.error('❌ Filter failed:', data.error);
+                        alert('Error applying filter: ' + data.error);
+                    }
+                    
+                    hideLoading();
+                })
+                .catch(error => {
+                    console.error('❌ Error applying filter:', error);
+                    hideLoading();
+                    alert('Error applying filter. Please try again.');
+                });
+        }
+
+        // Update filtered charts with modern styling - FIXED MARGINS
+        function updateFilteredCharts(charts) {
+            console.log('📈 Updating filtered charts:', charts);
+            
+            // Update rating chart
+            if (charts.rating_dist) {
+                try {
+                    const ratingData = JSON.parse(charts.rating_dist);
+                    
+                    // Apply modern styling with better margins
+                    ratingData.layout.plot_bgcolor = 'rgba(0,0,0,0)';
+                    ratingData.layout.paper_bgcolor = 'rgba(0,0,0,0)';
+                    ratingData.layout.font = {family: 'Inter, sans-serif', size: 12, color: '#374151'};
+                    ratingData.layout.margin = {l: 70, r: 40, t: 40, b: 90};  // Increased margins
+                    ratingData.layout.showlegend = false;
+                    
+                    // Color gradient based on rating values
+                    if (ratingData.data && ratingData.data[0]) {
+                        const ratings = ratingData.data[0].x || [1, 2, 3, 4, 5];
+                        const colors = ratings.map(rating => {
+                            if (rating <= 2) {
+                                return '#ef4444'; // Red for low ratings
+                            } else if (rating <= 3) {
+                                return '#f59e0b'; // Yellow/Orange for medium ratings
+                            } else if (rating <= 4) {
+                                return '#22c55e'; // Light green for good ratings
+                            } else {
+                                return '#16a34a'; // Dark green for excellent ratings
+                            }
+                        });
+                        ratingData.data[0].marker.color = colors;
+                        ratingData.data[0].marker.line = {color: '#ffffff', width: 2};
+                    }
+                    
+                    Plotly.newPlot('ratingChart', ratingData.data, ratingData.layout, {
+                        responsive: true,
+                        displayModeBar: false
+                    });
+                } catch (e) {
+                    console.error('Error updating rating chart:', e);
+                }
+            }
+            
+            // Update sentiment chart
+            if (charts.sentiment_dist) {
+                try {
+                    const sentimentData = JSON.parse(charts.sentiment_dist);
+                    
+                    // Apply modern styling with better margins
+                    sentimentData.layout.plot_bgcolor = 'rgba(0,0,0,0)';
+                    sentimentData.layout.paper_bgcolor = 'rgba(0,0,0,0)';
+                    sentimentData.layout.font = {family: 'Inter, sans-serif', size: 12, color: '#374151'};
+                    sentimentData.layout.margin = {l: 50, r: 50, t: 40, b: 70};  // Better margins
+                    
+                    // Modern colors for sentiment
+                    if (sentimentData.data && sentimentData.data[0]) {
+                        const labels = sentimentData.data[0].labels;
+                        const modernColors = labels.map(label => {
+                            switch(label.toLowerCase()) {
+                                case 'positive': return '#10b981';
+                                case 'neutral': return '#f59e0b';  
+                                case 'negative': return '#ef4444';
+                                default: return '#6b7280';
+                            }
+                        });
+                        sentimentData.data[0].marker.colors = modernColors;
+                        sentimentData.data[0].marker.line = {color: 'white', width: 3};
+                    }
+                    
+                    Plotly.newPlot('sentimentChart', sentimentData.data, sentimentData.layout, {
+                        responsive: true,
+                        displayModeBar: false
+                    });
+                } catch (e) {
+                    console.error('Error updating sentiment chart:', e);
+                }
+            }
+            
+            // NOTE: Top charts tidak diupdate untuk filtered views karena disembunyikan
+            console.log('ℹ️ Top 10 charts hidden for filtered views');
+        }
+
+        // Update filter counts
+        function updateFilterCounts(counts) {
+            console.log('🔢 Updating filter counts:', counts);
+            visitLevelCounts = counts;
+        }
+
+        // Load complaint analysis
+        function loadComplaintAnalysis(filterType = 'all') {
+            console.log('🔍 Loading complaint analysis for filter:', filterType);
+            
+            const complaintContent = document.getElementById('complaintAnalysisContent');
+            if (!complaintContent) return;
+            
+            // Show loading
+            complaintContent.innerHTML = `
+                <div class="text-center">
+                    <div class="modern-spinner"></div>
+                    <p class="mt-3 text-muted">Memuat analisis keluhan...</p>
+                </div>
+            `;
+            
+            fetch(`/api/complaint_analysis?filter=${filterType}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📊 Complaint analysis received:', data);
+                    complaintData = data;
+                    renderComplaintAnalysis(data);
+                })
+                .catch(error => {
+                    console.error('❌ Error loading complaint analysis:', error);
+                    complaintContent.innerHTML = `
+                        <div class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                            <p>Error loading complaint analysis</p>
+                        </div>
+                    `;
+                });
+        }
+
+        // Render complaint analysis with enhanced design - REMOVED SUMMARY STATS
+        function renderComplaintAnalysis(data) {
+            const complaintContent = document.getElementById('complaintAnalysisContent');
+            if (!complaintContent) return;
+            
+            if (!data.success || data.total_complaints === 0) {
+                // No complaints found
+                complaintContent.innerHTML = `
+                    <div class="no-complaints">
+                        <div class="no-complaints-icon">
+                            <i class="fas fa-smile"></i>
+                        </div>
+                        <h4 class="no-complaints-title">Excellent Performance!</h4>
+                        <p class="no-complaints-desc">
+                            Tidak ada keluhan signifikan terdeteksi dalam dataset review${data.filter_type !== 'all' ? ` untuk kategori kunjungan ${data.filter_type}` : ''}. 
+                            Semua destinasi memiliki feedback yang positif.
+                        </p>
+                        <div class="mt-3">
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-check-circle me-1"></i>
+                                ${data.total_reviews_analyzed} review dianalisis
+                            </span>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Render complaint analysis with enhanced design - REMOVED SUMMARY STATS
+            let html = `
+                <div class="complaint-analysis-container">
+                    <div class="complaint-list">
+                        <div class="complaint-list-header">
+                            <h6 class="complaint-list-title">
+                                <i class="fas fa-list"></i>
+                                Top ${data.top_complaints.length} Keluhan Wisatawan
+                            </h6>
+                            <div class="complaint-stats">
+                                <span class="complaint-stat">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    ${data.total_complaints} Total Keluhan
+                                </span>
+                                <span class="complaint-stat">
+                                    <i class="fas fa-comment-slash me-1"></i>
+                                    ${data.total_negative_reviews} Review Negatif
+                                </span>
+                                <span class="complaint-stat">
+                                    <i class="fas fa-tags me-1"></i>
+                                    ${data.categories_found} Kategori
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="complaint-items">
+            `;
+            
+            // Render top complaints with enhanced styling
+            data.top_complaints.forEach((complaint, index) => {
+                const [category, details] = complaint;
+                const categoryInfo = details.category_info || {};
+                const priority = details.percentage > 25 ? 'high' : details.percentage > 15 ? 'medium' : 'low';
+                
+                html += `
+                    <div class="complaint-item ${priority}">
+                        <div class="complaint-rank">${index + 1}</div>
+                        <div class="complaint-details">
+                            <div class="complaint-keyword">
+                                <i class="${categoryInfo.icon || 'fas fa-exclamation'} me-2" style="color: ${categoryInfo.color || '#dc2626'}"></i>
+                                ${categoryInfo.display_name || getCategoryDisplayName(category)}
+                            </div>
+                            <div class="complaint-frequency">
+                                ${details.total_count} mentions • ${categoryInfo.description || ''}
+                            </div>
+                            <div class="complaint-examples">
+                                ${details.keywords.slice(0, 4).map(kw => 
+                                    `<span class="complaint-example">${kw.keyword} (${kw.count})</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                        <div class="complaint-metrics">
+                            <div class="complaint-count">${details.total_count}</div>
+                            <div class="complaint-percentage">${details.percentage.toFixed(1)}%</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                        </div>
+                    </div>
+                    
+                    <div class="complaint-insights">
+                        <h6 class="insights-header">
+                            <i class="fas fa-lightbulb"></i>
+                            Insight & Rekomendasi
+                        </h6>
+            `;
+            
+            // Render insights
+            data.insights.forEach(insight => {
+                html += `
+                    <div class="insight-item ${insight.type}">
+                        <div class="insight-header">
+                            <div class="insight-icon">
+                                <i class="${insight.icon}"></i>
+                            </div>
+                            <h6 class="insight-title">${insight.title}</h6>
+                        </div>
+                        <p class="insight-description">${insight.description}</p>
+                    </div>
+                `;
+            });
+            
+            // Add trend indicator with enhanced data
+            if (data.trend_analysis && data.trend_analysis.percentage > 0) {
+                const trendClass = data.trend_analysis.trend === 'critical' ? 'danger' : 
+                                  data.trend_analysis.trend === 'high' ? 'warning' : 'info';
+                
+                html += `
+                    <div class="trend-indicator">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-${trendClass}">
+                                <i class="fas fa-chart-line me-1"></i>
+                                Analisis Trend
+                            </span>
+                            <span class="badge bg-${trendClass}">${data.trend_analysis.trend.toUpperCase()}</span>
+                        </div>
+                        <div class="trend-value">${data.trend_analysis.percentage.toFixed(1)}%</div>
+                        <div class="trend-label">${data.trend_analysis.description}</div>
+                        
+                        ${data.wisata_complaints && data.wisata_complaints.total_destinations_with_complaints > 0 ? `
+                        <div class="mt-3 pt-3 border-top">
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                ${data.wisata_complaints.total_destinations_with_complaints} destinasi memiliki keluhan
+                            </small>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            complaintContent.innerHTML = html;
+            
+            console.log('✅ Enhanced complaint analysis rendered successfully (without summary stats)');
+        }
+
+        // Update complaint analysis when filter changes
+        function updateComplaintAnalysis(filterType) {
+            console.log('🔄 Updating complaint analysis for filter:', filterType);
+            loadComplaintAnalysis(filterType);
+        }
+
+        // Get category display name
+        function getCategoryDisplayName(category) {
+            const displayNames = {
+                'harga': 'Harga Mahal',
+                'fasilitas': 'Fasilitas Rusak',
+                'kebersihan': 'Kebersihan Kurang',
+                'pelayanan': 'Pelayanan Buruk',
+                'antrian': 'Antrian Panjang',
+                'akses': 'Akses Sulit',
+                'kualitas': 'Kualitas Mengecewakan',
+                'keamanan': 'Keamanan Kurang',
+                'makanan': 'Makanan Tidak Memuaskan',
+                'wahana': 'Wahana Bermasalah',
+                'transportasi': 'Transportasi Sulit',
+                'informasi': 'Informasi Kurang',
+                'waktu_operasional': 'Jam Operasional Buruk',
+                'lingkungan': 'Lingkungan Tidak Nyaman',
+                'covid_protokol': 'Protokol Kesehatan Kurang'
+            };
+            
+            return displayNames[category] || category.charAt(0).toUpperCase() + category.slice(1);
+        }
+
+        // Create filtered quadrant chart with modern styling - FIXED RANGE
+        function createFilteredQuadrantChart(filterType) {
+            console.log('🔄 Creating filtered quadrant chart for:', filterType);
+            
+            // HIDE QUADRANT CHART FOR FILTERED VIEWS
+            const quadrantSection = document.getElementById('quadrantSection');
+            if (filterType !== 'all') {
+                if (quadrantSection) {
+                    quadrantSection.style.display = 'none';
+                }
+                console.log('❌ Quadrant chart hidden for filter:', filterType);
+                return;
+            } else {
+                if (quadrantSection) {
+                    quadrantSection.style.display = 'block';
+                }
+            }
+            
+            // Fetch filtered quadrant data
+            fetch(`/api/quadrant_data_filtered?filter=${filterType}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📊 Filtered quadrant data received:', data);
+                    
+                    if (data.success && data.quadrant_data) {
+                        console.log(`✅ Using ${data.data_source} with ${data.total_wisata_processed} wisata`);
+                        console.log(`📋 Matched wisata:`, data.matched_wisata);
+                        
+                        if (data.skipped_wisata_count > 0) {
+                            console.log(`⚠️ Skipped ${data.skipped_wisata_count}/${data.total_wisata_in_dataset} wisata without external data`);
+                            console.log(`📝 Skipped wisata sample:`, data.skipped_wisata);
+                        }
+                        
+                        quadrantData = data;
+                        const chartData = data.quadrant_data;
+                        
+                        // FIXED RANGE: Gunakan range yang sudah ditentukan
+                        const xMin = data.x_min || -100000;  // -100k
+                        const xMax = data.x_max || 2500000;  // 2.5M
+                        const yMin = data.y_min || 1.0;      // 1.0
+                        const yMax = data.y_max || 5.2;      // 5.2
+                        
+                        const centerX = data.avg_visits;
+                        const centerY = data.avg_rating;
+                        
+                        quadrantBounds = {
+                            xMin, xMax, yMin, yMax, centerX, centerY
+                        };
+                        
+                        // Modern colors for quadrants
+                        const colors = chartData.ratings.map((rating, index) => {
+                            const visits = chartData.visits[index];
+                            return getQuadrantColor(rating, visits, centerY, centerX);
+                        });
+                        
+                        // Create modern scatter plot
+                        var trace = {
+                            x: chartData.visits,
+                            y: chartData.ratings,
+                            text: chartData.names,
+                            mode: 'markers',
+                            type: 'scatter',
+                            marker: {
+                                size: 16,
+                                color: colors,
+                                line: {
+                                    width: 3,
+                                    color: 'white'
+                                },
+                                opacity: 0.85
+                            },
+                            hovertemplate: '<b>%{text}</b><br>' +
+                                        'Rating: %{y:.2f}<br>' +
+                                        'Kunjungan: %{x:,}<br>' +
+                                        '<i>Klik untuk detail lengkap</i>' +
+                                        '<extra></extra>',
+                            name: 'Wisata'
+                        };
+
+                        var layout = {
+                            title: '',
+                            xaxis: {
+                                title: {
+                                    text: 'Jumlah Kunjungan (Data Manual Admin)',
+                                    font: {size: 14, color: '#374151', family: 'Inter, sans-serif'}
+                                },
+                                showgrid: true,
+                                gridcolor: 'rgba(107, 114, 128, 0.2)',
+                                gridwidth: 1,
+                                zeroline: true,
+                                zerolinecolor: 'rgba(107, 114, 128, 0.4)',
+                                zerolinewidth: 1,
+                                range: [xMin, xMax],  // FIXED RANGE: -100k to 2.5M
+                                tickfont: {size: 11, color: '#6b7280', family: 'Inter, sans-serif'},
+                                tickformat: '.2s'  // Format angka besar (1M, 2M, etc.)
+                            },
+                            yaxis: {
+                                title: {
+                                    text: 'Rating Rata-rata',
+                                    font: {size: 14, color: '#374151', family: 'Inter, sans-serif'}
+                                },
+                                showgrid: true,
+                                gridcolor: 'rgba(107, 114, 128, 0.2)',
+                                gridwidth: 1,
+                                zeroline: false,
+                                range: [yMin, yMax],  // FIXED RANGE: 1.0 to 5.2
+                                tickfont: {size: 11, color: '#6b7280', family: 'Inter, sans-serif'}
+                            },
+                            plot_bgcolor: 'rgba(248, 250, 252, 0.5)',
+                            paper_bgcolor: 'rgba(0,0,0,0)',
+                            font: {family: 'Inter, sans-serif', size: 12, color: '#374151'},
+                            margin: {l: 80, r: 340, t: 40, b: 100},  // Increased bottom margin
+                            showlegend: false,
+                            hovermode: 'closest'
+                        };
+
+                        // Modern quadrant styling dengan range yang diperbaiki
+                        layout.shapes = [
+                            // Vertical line (garis tengah vertikal)
+                            {
+                                type: 'line',
+                                x0: centerX, x1: centerX,
+                                y0: yMin, y1: yMax,
+                                line: {
+                                    color: 'rgba(107, 114, 128, 0.6)',
+                                    width: 2,
+                                    dash: 'dot'
+                                }
+                            },
+                            // Horizontal line (garis tengah horizontal)
+                            {
+                                type: 'line',
+                                x0: xMin, x1: xMax,
+                                y0: centerY, y1: centerY,
+                                line: {
+                                    color: 'rgba(107, 114, 128, 0.6)',
+                                    width: 2,
+                                    dash: 'dot'
+                                }
+                            },
+                            // Kuadran I (Kanan Atas) - Rating Tinggi + Kunjungan Tinggi
+                            {
+                                type: 'rect',
+                                x0: centerX, x1: xMax,
+                                y0: centerY, y1: yMax,
+                                fillcolor: 'rgba(16, 185, 129, 0.08)',
+                                line: {width: 0}
+                            },
+                            // Kuadran II (Kiri Atas) - Rating Tinggi + Kunjungan Rendah
+                            {
+                                type: 'rect',
+                                x0: xMin, x1: centerX,
+                                y0: centerY, y1: yMax,
+                                fillcolor: 'rgba(245, 158, 11, 0.08)',
+                                line: {width: 0}
+                            },
+                            // Kuadran III (Kiri Bawah) - Rating Rendah + Kunjungan Rendah
+                            {
+                                type: 'rect',
+                                x0: xMin, x1: centerX,
+                                y0: yMin, y1: centerY,
+                                fillcolor: 'rgba(239, 68, 68, 0.08)',
+                                line: {width: 0}
+                            },
+                            // Kuadran IV (Kanan Bawah) - Rating Rendah + Kunjungan Tinggi
+                            {
+                                type: 'rect',
+                                x0: centerX, x1: xMax,
+                                y0: yMin, y1: centerY,
+                                fillcolor: 'rgba(59, 130, 246, 0.08)',
+                                line: {width: 0}
+                            }
+                        ];
+
+                        // Create the plot
+                        Plotly.newPlot('quadrantChart', [trace], layout, {
+                            responsive: true,
+                            displayModeBar: false,
+                            doubleClick: 'reset',
+                            scrollZoom: false,
+                            editable: false
+                        }).then(function(gd) {
+                            console.log('✅ Modern quadrant chart created successfully');
+                            
+                            plotElement = gd;
+                            
+                            // Add click event listener
+                            const chartElement = document.getElementById('quadrantChart');
+                            
+                            chartElement.on('plotly_click', function(eventData) {
+                                console.log('🖱️ PLOTLY CLICK detected!', eventData);
+                                
+                                plotlyClickHandled = true;
+                                
+                                if (eventData.points && eventData.points.length > 0) {
+                                    const point = eventData.points[0];
+                                    const pointIndex = point.pointNumber;
+                                    
+                                    let x = 200, y = 200;
+                                    if (eventData.event) {
+                                        const rect = chartElement.getBoundingClientRect();
+                                        x = eventData.event.clientX - rect.left;
+                                        y = eventData.event.clientY - rect.top;
+                                    }
+                                    
+                                    showWisataPopup(pointIndex, x, y);
+                                }
+                                
+                                setTimeout(() => {
+                                    plotlyClickHandled = false;
+                                }, 100);
+                            });
+                            
+                            // Setup legend hover effects
+                            setTimeout(() => {
+                                setupLegendHoverEffects();
+                            }, 500);
+                        });
+                        
+                        console.log(`✅ Modern quadrant chart created with ${chartData.names.length} destinations`);
+                        console.log(`📊 Chart range: X(${xMin.toLocaleString()} to ${xMax.toLocaleString()}), Y(${yMin} to ${yMax})`);
+                        console.log(`📊 All data points use MANUAL ADMIN kunjungan data only`);
+                    } else {
+                        console.error('❌ Failed to load filtered quadrant data:', data.error || 'Unknown error');
+                        if (data.skipped_wisata && data.skipped_wisata.length > 0) {
+                            console.log('📝 Destinations without kunjungan data:', data.skipped_wisata);
+                            console.log('💡 Please add these destinations in admin panel');
+                        }
+                        createEmptyQuadrantChart();
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error fetching filtered quadrant data:', error);
+                    createEmptyQuadrantChart();
+                });
+        }
+
+        // Create empty quadrant chart - UPDATED RANGE
+        function createEmptyQuadrantChart() {
+            var layout = {
+                title: '',
+                xaxis: {
+                    title: 'Jumlah Kunjungan (Data Manual Admin)',
+                    showgrid: true,
+                    gridcolor: 'rgba(107, 114, 128, 0.3)',
+                    zeroline: true,
+                    zerolinecolor: 'rgba(107, 114, 128, 0.4)',
+                    zerolinewidth: 1,
+                    range: [-100000, 2500000],  // FIXED RANGE: -100k to 2.5M
+                    tickfont: {size: 11, color: '#6b7280', family: 'Inter, sans-serif'},
+                    tickformat: '.2s'  // Format angka besar
+                },
+                yaxis: {
+                    title: 'Rating Rata-rata',
+                    showgrid: true,
+                    gridcolor: 'rgba(107, 114, 128, 0.3)',
+                    zeroline: false,
+                    range: [1, 5.2],  // Rating range 1-5.2
+                    tickfont: {size: 11, color: '#6b7280', family: 'Inter, sans-serif'}
+                },
+                plot_bgcolor: 'rgba(248, 250, 252, 0.5)',
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                font: {family: 'Inter, sans-serif', size: 12, color: '#374151'},
+                margin: {l: 80, r: 340, t: 50, b: 100},  // Increased bottom margin
+                hovermode: 'closest',
+                annotations: [{
+                    x: 0.5,
+                    y: 0.5,
+                    xref: 'paper',
+                    yref: 'paper',
+                    text: 'Data tidak tersedia.<br>Silakan upload data wisata terlebih dahulu.',
+                    showarrow: false,
+                    font: {size: 14, color: '#6b7280', family: 'Inter, sans-serif'},
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    bordercolor: '#e5e7eb',
+                    borderwidth: 2,
+                    borderpad: 20
+                }]
+            };
+
+            Plotly.newPlot('quadrantChart', [], layout, {
+                responsive: true,
+                displayModeBar: false
+            });
+        }
+
+        // Close popup when clicking outside
+        document.addEventListener('click', function(event) {
+            if (plotlyClickHandled) {
+                return;
+            }
+            
+            const popup = document.getElementById('wisataInfoPopup');
+            const chart = document.getElementById('quadrantChart');
+            
+            if (popup && popup.style.display === 'block' && 
+                !popup.contains(event.target) && 
+                !chart.contains(event.target)) {
+                closeWisataPopup();
+            }
+        });
+
+        // Setup dropdown event listener
+        function setupDropdownFilter() {
+            const filterSelect = document.getElementById('filterSelect');
+            if (filterSelect) {
+                filterSelect.addEventListener('change', function() {
+                    const filterType = this.value;
+                    console.log('📋 Dropdown filter changed:', filterType);
+                    applyFilterFromDropdown(filterType);
+                });
+            }
+        }
+
+        // Initialize filter counts
+        function initializeFilterCounts() {
+            fetch('/api/filter_data?filter=all')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.visit_level_counts) {
+                        updateFilterCounts(data.visit_level_counts);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting initial filter counts:', error);
+                });
+        }
+
+        // Chart rendering with modern styling - UPDATED MARGINS
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Modern Dashboard Loading');
+            showLoading();
+            
+            // Initialize scroll effects
+            initializeScrollEffects();
+            
+            try {
+                let chartsToLoad = 0;
+                let chartsLoaded = 0;
+
+                function checkAllChartsLoaded() {
+                    chartsLoaded++;
+                    console.log(`📊 Charts loaded: ${chartsLoaded}/${chartsToLoad}`);
+                    if (chartsLoaded >= chartsToLoad) {
+                        // Load complaint analysis after all charts are loaded
+                        setTimeout(() => {
+                            loadComplaintAnalysis('all');
+                            hideLoading();
+                        }, 500);
+                    }
+                }
+
+                // Rating Distribution Chart
+                {% if charts and charts.rating_dist %}
+                chartsToLoad++;
+                var ratingData = {{ charts.rating_dist|safe }};
+                if (ratingData && ratingData.data) {
+                    // Apply modern styling with better margins
+                    ratingData.layout.plot_bgcolor = 'rgba(0,0,0,0)';
+                    ratingData.layout.paper_bgcolor = 'rgba(0,0,0,0)';
+                    ratingData.layout.font = {family: 'Inter, sans-serif', size: 12, color: '#374151'};
+                    ratingData.layout.margin = {l: 70, r: 40, t: 40, b: 90};  // Increased margins
+                    ratingData.layout.showlegend = false;
+                    
+                    // Color gradient based on rating values
+                    if (ratingData.data[0]) {
+                        const ratings = ratingData.data[0].x || [1, 2, 3, 4, 5];
+                        const colors = ratings.map(rating => {
+                            if (rating <= 2) {
+                                return '#ef4444'; // Red for low ratings
+                            } else if (rating <= 3) {
+                                return '#f59e0b'; // Yellow/Orange for medium ratings
+                            } else if (rating <= 4) {
+                                return '#22c55e'; // Light green for good ratings
+                            } else {
+                                return '#16a34a'; // Dark green for excellent ratings
+                            }
+                        });
+                        ratingData.data[0].marker.color = colors;
+                        ratingData.data[0].marker.line = {color: '#ffffff', width: 2};
+                    }
+                    
+                    Plotly.newPlot('ratingChart', ratingData.data, ratingData.layout, {
+                        responsive: true,
+                        displayModeBar: false
+                    }).then(checkAllChartsLoaded);
+                } else {
+                    checkAllChartsLoaded();
+                }
+                {% endif %}
+
+                // Sentiment Distribution Chart
+                {% if charts and charts.sentiment_dist %}
+                chartsToLoad++;
+                var sentimentData = {{ charts.sentiment_dist|safe }};
+                if (sentimentData && sentimentData.data) {
+                    // Apply modern styling
+                    sentimentData.layout.plot_bgcolor = 'rgba(0,0,0,0)';
+                    sentimentData.layout.paper_bgcolor = 'rgba(0,0,0,0)';
+                    sentimentData.layout.font = {family: 'Inter, sans-serif', size: 12, color: '#374151'};
+                    sentimentData.layout.margin = {l: 50, r: 50, t: 40, b: 70};  // Better margins
+                    
+                    // Modern colors
+                    if (sentimentData.data[0] && sentimentData.data[0].labels) {
+                        const labels = sentimentData.data[0].labels;
+                        const modernColors = labels.map(label => {
+                            switch(label.toLowerCase()) {
+                                case 'positive': return '#10b981';
+                                case 'neutral': return '#f59e0b';  
+                                case 'negative': return '#ef4444';
+                                default: return '#6b7280';
+                            }
+                        });
+                        sentimentData.data[0].marker.colors = modernColors;
+                        sentimentData.data[0].marker.line = {color: 'white', width: 3};
+                    }
+                    
+                    Plotly.newPlot('sentimentChart', sentimentData.data, sentimentData.layout, {
+                        responsive: true,
+                        displayModeBar: false
+                    }).then(checkAllChartsLoaded);
+                } else {
+                    checkAllChartsLoaded();
+                }
+                {% endif %}
+
+                // Top 10 by Rating Chart - ONLY FOR 'ALL' FILTER
+                {% if charts and charts.top_rating %}
+                chartsToLoad++;
+                var topRatingData = {{ charts.top_rating|safe }};
+                if (topRatingData && topRatingData.data) {
+                    topRatingData.layout.plot_bgcolor = 'rgba(0,0,0,0)';
+                    topRatingData.layout.paper_bgcolor = 'rgba(0,0,0,0)';
+                    topRatingData.layout.font = {family: 'Inter, sans-serif', size: 11, color: '#374151'};
+                    topRatingData.layout.margin = {l: 220, r: 50, t: 30, b: 90};  // Increased margins
+                    
+                    // Modern color
+                    if (topRatingData.data[0]) {
+                        topRatingData.data[0].marker.color = '#f59e0b';
+                        topRatingData.data[0].marker.line = {color: '#d97706', width: 2};
+                    }
+                    
+                    Plotly.newPlot('topRatingChart', topRatingData.data, topRatingData.layout, {
+                        responsive: true,
+                        displayModeBar: false
+                    }).then(checkAllChartsLoaded);
+                } else {
+                    checkAllChartsLoaded();
+                }
+                {% endif %}
+
+                // Top 10 by Visits Chart - ONLY FOR 'ALL' FILTER
+                {% if charts and charts.top_visits %}
+                chartsToLoad++;
+                var topVisitsData = {{ charts.top_visits|safe }};
+                if (topVisitsData && topVisitsData.data) {
+                    topVisitsData.layout.plot_bgcolor = 'rgba(0,0,0,0)';
+                    topVisitsData.layout.paper_bgcolor = 'rgba(0,0,0,0)';
+                    topVisitsData.layout.font = {family: 'Inter, sans-serif', size: 11, color: '#374151'};
+                    topVisitsData.layout.margin = {l: 220, r: 50, t: 30, b: 90};  // Increased margins
+                    
+                    // Modern color
+                    if (topVisitsData.data[0]) {
+                        topVisitsData.data[0].marker.color = '#3b82f6';
+                        topVisitsData.data[0].marker.line = {color: '#2563eb', width: 2};
+                    }
+                    
+                    Plotly.newPlot('topVisitChart', topVisitsData.data, topVisitsData.layout, {
+                        responsive: true,
+                        displayModeBar: false
+                    }).then(checkAllChartsLoaded);
+                } else {
+                    checkAllChartsLoaded();
+                }
+                {% endif %}
+
+                // Modern Quadrant Analysis Chart - ONLY FOR 'ALL' FILTER
+                chartsToLoad++;
+                updateChartTitlesAndLegend('all');
+                updateActiveFilterIndicator('all');
+                createFilteredQuadrantChart('all');
+                checkAllChartsLoaded();
+
+                // Setup dropdown filter
+                setupDropdownFilter();
+                
+                // Initialize filter counts
+                initializeFilterCounts();
+
+                // If no charts to load, hide loading immediately
+                if (chartsToLoad === 0) {
+                    loadComplaintAnalysis('all');
+                    hideLoading();
+                }
+
+            } catch (error) {
+                console.error('❌ Error rendering modern dashboard:', error);
+                hideLoading();
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            setTimeout(() => {
+                try {
+                    Plotly.Plots.resize('ratingChart');
+                    Plotly.Plots.resize('sentimentChart');
+                    Plotly.Plots.resize('topRatingChart');
+                    Plotly.Plots.resize('topVisitChart');
+                    if (currentFilter === 'all') {
+                        Plotly.Plots.resize('quadrantChart');
+                    }
+                } catch (error) {
+                    console.error('Error resizing charts:', error);
+                }
+            }, 100);
+        });
+
+        // Add smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

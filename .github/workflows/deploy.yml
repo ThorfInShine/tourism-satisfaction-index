@@ -1,0 +1,50 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        script: |
+          echo "🚀 Starting deployment..."
+          
+          # Navigate to app directory
+          cd /var/www/html/batas.bpskotabatu.com
+          
+          # Backup data
+          if [ -f "data/combined_batu_tourism_reviews_cleaned.csv" ]; then
+            cp data/combined_batu_tourism_reviews_cleaned.csv data/backups/backup_$(date +%Y%m%d_%H%M%S).csv
+          fi
+          
+          # Pull latest code
+          git fetch origin
+          git reset --hard origin/main
+          
+          # Update dependencies
+          venv/bin/pip install -r requirements.txt
+          
+          # Set permissions
+          chown -R www-data:www-data .
+          chmod -R 755 .
+          
+          # Restart application
+          supervisorctl restart batas-app
+          
+          # Reload nginx
+          nginx -t && systemctl reload nginx
+          
+          echo "✅ Deployment completed!"

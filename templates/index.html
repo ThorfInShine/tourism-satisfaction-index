@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tourist Satisfaction Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== MODERN NAVBAR WITH SCROLL EFFECT ===== */
+        .navbar {
+            background: rgba(255, 255, 255, 0.1) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1rem 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+        }
+
+        /* ===== NAVBAR SCROLL STATES ===== */
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar.scrolled .navbar-brand {
+            opacity: 0.95;
+        }
+
+        .navbar.scrolled .nav-link {
+            color: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        .navbar.scrolled .nav-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white !important;
+        }
+
+        .navbar.scrolled .navbar-toggler {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .navbar.scrolled .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.95%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: white !important;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: white !important;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* ===== SCROLL INDICATOR ===== */
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #ff6b35, #f7931e);
+            transform-origin: left;
+            transform: scaleX(0);
+            z-index: 1031;
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            padding: 120px 0 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .speech-bubble {
+            background: rgba(34, 197, 94, 0.9);
+            border-radius: 25px;
+            padding: 2rem 2.5rem;
+            position: relative;
+            margin: 2rem 0;
+            backdrop-filter: blur(10px);
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 60px;
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 18px solid rgba(34, 197, 94, 0.9);
+        }
+
+        .speech-bubble h2 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.95);
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+            max-width: 550px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+            border: none;
+            padding: 1.2rem 3rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(255, 107, 53, 0.4);
+            color: white;
+        }
+
+        /* Hero Illustrations */
+        .hero-illustrations {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 500px;
+            padding: 2rem;
+        }
+
+        .hero-travel-img {
+            width: 100%;
+            max-width: 450px;
+            height: auto;
+            animation: float 6s ease-in-out infinite;
+            filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.2));
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 3rem 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+        }
+
+        .feature-icon.dashboard {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .feature-icon.analysis {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            color: white;
+        }
+
+        .feature-icon.recommendation {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1rem;
+        }
+
+        .feature-description {
+            color: #6b7280;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Stats Section - Improved */
+        .stats-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            margin: 2rem auto;
+            padding: 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 2;
+        }
+
+        .stats-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 3rem;
+        }
+
+        .stats-content {
+            display: flex;
+            gap: 4rem;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-number {
+            font-size: 4.2rem;
+            font-weight: 800;
+            color: #3b82f6;
+            line-height: 1;
+            margin-bottom: 0.8rem;
+        }
+
+        .stat-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 0.6rem;
+        }
+
+        .stat-description {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .stats-illustration {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stats-img {
+            width: 220px;
+            height: auto;
+            animation: float 5s ease-in-out infinite;
+            filter: drop-shadow(0 5px 20px rgba(0, 0, 0, 0.1));
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stat-loading {
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .stat-error {
+            color: #dc2626;
+            font-size: 0.875rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(20px);
+            padding: 2rem 0;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .social-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .stats-content {
+                gap: 3rem;
+            }
+
+            .stats-img {
+                width: 180px;
+            }
+
+            .stat-number {
+                font-size: 3.8rem;
+            }
+
+            .stat-title {
+                font-size: 1.3rem;
+            }
+
+            .stat-description {
+                font-size: 0.95rem;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .stats-container {
+                flex-direction: column;
+                text-align: center;
+                gap: 2rem;
+            }
+
+            .stats-content {
+                justify-content: center;
+                gap: 3rem;
+            }
+
+            .stats-illustration {
+                order: -1;
+            }
+
+            .stat-number {
+                font-size: 3.5rem;
+            }
+
+            .stat-title {
+                font-size: 1.25rem;
+            }
+
+            .stat-description {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .speech-bubble h2 {
+                font-size: 2.2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.1rem;
+            }
+
+            .btn-start {
+                padding: 1rem 2.5rem;
+                font-size: 1.1rem;
+            }
+
+            .stats-content {
+                flex-direction: column;
+                gap: 2.5rem;
+                text-align: center;
+            }
+
+            .stat-item {
+                text-align: center;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .hero-illustrations {
+                height: 350px;
+                padding: 1rem;
+            }
+
+            .hero-travel-img {
+                max-width: 300px;
+            }
+
+            .hero-section {
+                padding: 100px 0 40px;
+            }
+
+            .hero-content {
+                order: 2;
+            }
+
+            .hero-illustrations {
+                order: 1;
+                margin-bottom: 1rem;
+            }
+
+            .stat-number {
+                font-size: 3.2rem;
+            }
+
+            .stat-title {
+                font-size: 1.2rem;
+            }
+
+            .stat-description {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .speech-bubble {
+                padding: 1.5rem 2rem;
+            }
+
+            .speech-bubble h2 {
+                font-size: 1.8rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+
+            .btn-start {
+                padding: 0.9rem 2rem;
+                font-size: 1rem;
+            }
+
+            .feature-card {
+                padding: 1.5rem;
+            }
+
+            .stats-section {
+                margin: 1rem;
+                padding: 2rem 1.5rem;
+            }
+
+            .stat-number {
+                font-size: 2.8rem;
+            }
+
+            .stat-title {
+                font-size: 1.1rem;
+            }
+
+            .stat-description {
+                font-size: 0.85rem;
+            }
+
+            .hero-illustrations {
+                height: 250px;
+            }
+
+            .hero-travel-img {
+                max-width: 250px;
+            }
+
+            .stats-img {
+                width: 150px;
+            }
+
+            .stats-content {
+                gap: 2rem;
+            }
+        }
+
+        /* ===== SCROLL INDICATOR ===== */
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #ff6b35, #f7931e);
+            transform-origin: left;
+            transform: scaleX(0);
+            z-index: 1031;
+            transition: transform 0.1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll Progress Indicator -->
+    <div class="scroll-indicator" id="scrollIndicator"></div>
+
+    <!-- Navigation with Scroll Effect -->
+    <nav class="navbar navbar-expand-lg" id="mainNavbar">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line"></i>
+                Tourist Satisfaction Analyzer
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <a class="nav-link" href="/dashboard">Dashboard</a>
+                    <a class="nav-link" href="/analysis">Analysis</a>
+                    <a class="nav-link" href="/admin">Admin</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <!-- Gambar di sebelah kiri - Hero Section -->
+                <div class="col-lg-6 order-lg-1 order-2">
+                    <div class="hero-illustrations">
+                        <img src="https://res.cloudinary.com/dk2tex4to/image/upload/v1755629984/Desain_tanpa_judul-removebg-preview_izdxie.png" 
+                             alt="Travel Illustration" 
+                             class="hero-travel-img">
+                    </div>
+                </div>
+                
+                <!-- Konten teks di sebelah kanan -->
+                <div class="col-lg-6 order-lg-2 order-1">
+                    <div class="hero-content">
+                        <div class="speech-bubble">
+                            <h2>Data Bicara:<br>Seberapa<br>Puaskah<br>Wisatawan Anda?</h2>
+                        </div>
+                        <p class="hero-subtitle">
+                            Platform canggih untuk menganalisis kepuasan wisatawan menggunakan 
+                            Machine Learning dan Natural Language Processing. Dapatkan insights mendalam
+                        </p>
+                        <a href="/dashboard" class="btn btn-start">
+                            <i class="fas fa-play"></i>
+                            Mulai Analisis
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon dashboard">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <h3 class="feature-title">Dashboard Interaktif</h3>
+                        <p class="feature-description">
+                            Visualisasi data real-time dengan charts dan statistik 
+                            yang mudah dipahami, untuk pengambilan keputusan cepat.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon analysis">
+                            <i class="fas fa-tree"></i>
+                        </div>
+                        <h3 class="feature-title">Analisis Sentimen AI</h3>
+                        <p class="feature-description">
+                            Teknologi Natural Language Processing untuk menganalisis 
+                            sentimen dan emosi dari review wisatawan secara otomatis.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="feature-card">
+                        <div class="feature-icon recommendation">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <h3 class="feature-title">Rekomendasi Cerdas</h3>
+                        <p class="feature-description">
+                            Saran perbaikan prioritas berdasarkan analisis data 
+                            untuk meningkatkan kualitas destinasi wisata.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section with Dynamic Data -->
+    <section class="container">
+        <div class="stats-section">
+            <div class="stats-container">
+                <div class="stats-content">
+                    <!-- Review Diproses -->
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalReviews">
+                            <span class="loading-spinner"></span>
+                        </div>
+                        <div class="stat-title">Review Diproses</div>
+                        <div class="stat-description" id="totalReviewsDesc">Memuat data...</div>
+                    </div>
+                    
+                    <!-- Destinasi Wisata -->
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalDestinations">
+                            <span class="loading-spinner"></span>
+                        </div>
+                        <div class="stat-title">Destinasi Wisata</div>
+                        <div class="stat-description" id="totalDestinationsDesc">Memuat data...</div>
+                    </div>
+                </div>
+                
+                <!-- Ilustrasi di sebelah kanan - Stats Section -->
+                <div class="stats-illustration">
+                    <img src="https://res.cloudinary.com/dk2tex4to/image/upload/v1755625548/ChatGPT_Image_Aug_20__2025__12_35_04_AM-removebg-preview_gttvad.png" 
+                         alt="Tourist Stats" 
+                         class="stats-img">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    © 2024 Tourist Satisfaction Analyzer
+                </div>
+                <div class="social-links">
+                    <a href="#" class="social-link">
+                        <i class="fab fa-facebook-f"></i>
+                    </a>
+                    <a href="#" class="social-link">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ===== NAVBAR SCROLL EFFECT ===== 
+        function initializeScrollEffects() {
+            const navbar = document.getElementById('mainNavbar');
+            const scrollIndicator = document.getElementById('scrollIndicator');
+            let isScrolled = false;
+            let ticking = false;
+            
+            function updateNavbarOnScroll() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const heroHeight = document.querySelector('.hero-section')?.offsetHeight || 200;
+                
+                // Update scroll progress indicator
+                const documentHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const scrollProgress = Math.min(scrollTop / documentHeight, 1);
+                if (scrollIndicator) {
+                    scrollIndicator.style.transform = `scaleX(${scrollProgress})`;
+                }
+                
+                // Update navbar transparency based on scroll position
+                const shouldBeScrolled = scrollTop > heroHeight * 0.3; // Start transition at 30% of hero height
+                
+                if (shouldBeScrolled && !isScrolled) {
+                    navbar.classList.add('scrolled');
+                    isScrolled = true;
+                    console.log('🔄 Navbar: Switched to transparent mode');
+                } else if (!shouldBeScrolled && isScrolled) {
+                    navbar.classList.remove('scrolled');
+                    isScrolled = false;
+                    console.log('🔄 Navbar: Switched to normal mode');
+                }
+                
+                ticking = false;
+            }
+            
+            function requestScrollUpdate() {
+                if (!ticking) {
+                    requestAnimationFrame(updateNavbarOnScroll);
+                    ticking = true;
+                }
+            }
+            
+            // Listen to scroll events
+            window.addEventListener('scroll', requestScrollUpdate, { passive: true });
+            
+            // Initial check
+            updateNavbarOnScroll();
+            
+            console.log('✅ Scroll effects initialized');
+        }
+
+        // ===== DYNAMIC STATS LOADING =====
+        function loadDynamicStats() {
+            console.log('📊 Loading dynamic stats from backend...');
+            
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📈 Stats data received:', data);
+                    
+                    if (data.success) {
+                        // Update Review Diproses
+                        const totalReviewsElement = document.getElementById('totalReviews');
+                        const totalReviewsDescElement = document.getElementById('totalReviewsDesc');
+                        
+                        if (totalReviewsElement && totalReviewsDescElement) {
+                            animateNumber(totalReviewsElement, 0, data.total_reviews, 2000);
+                            totalReviewsDescElement.textContent = 'Total review yang telah dianalisis';
+                        }
+                        
+                        // Update Destinasi Wisata
+                        const totalDestinationsElement = document.getElementById('totalDestinations');
+                        const totalDestinationsDescElement = document.getElementById('totalDestinationsDesc');
+                        
+                        if (totalDestinationsElement && totalDestinationsDescElement) {
+                            animateNumber(totalDestinationsElement, 0, data.total_destinations, 2000);
+                            totalDestinationsDescElement.textContent = 'Destinasi yang telah dianalisis';
+                        }
+                        
+                        console.log('✅ Stats updated successfully');
+                    } else {
+                        showStatsError(data.error || 'Failed to load stats');
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error loading stats:', error);
+                    showStatsError('Error loading data');
+                });
+        }
+        
+        // ===== ANIMATE NUMBER FUNCTION =====
+        function animateNumber(element, start, end, duration) {
+            let startTime = null;
+            
+            function animate(currentTime) {
+                if (startTime === null) startTime = currentTime;
+                const timeElapsed = currentTime - startTime;
+                const progress = Math.min(timeElapsed / duration, 1);
+                
+                // Use easing function for smooth animation
+                const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                const current = Math.floor(start + (end - start) * easeOutQuart);
+                
+                // Format number with 'k' suffix if >= 1000
+                if (current >= 1000) {
+                    const thousands = Math.floor(current / 1000);
+                    const remainder = current % 1000;
+                    if (remainder === 0 || current >= 10000) {
+                        element.textContent = thousands + 'k';
+                    } else {
+                        element.textContent = thousands + '.' + Math.floor(remainder / 100) + 'k';
+                    }
+                } else {
+                    element.textContent = current.toString();
+                }
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // ===== SHOW STATS ERROR =====
+        function showStatsError(errorMessage) {
+            console.error('📊 Stats error:', errorMessage);
+            
+            // Update Review Diproses with error
+            const totalReviewsElement = document.getElementById('totalReviews');
+            const totalReviewsDescElement = document.getElementById('totalReviewsDesc');
+            
+            if (totalReviewsElement && totalReviewsDescElement) {
+                totalReviewsElement.innerHTML = '<span class="stat-error">N/A</span>';
+                totalReviewsDescElement.innerHTML = '<span class="stat-error">Data tidak tersedia</span>';
+            }
+            
+            // Update Destinasi Wisata with error
+            const totalDestinationsElement = document.getElementById('totalDestinations');
+            const totalDestinationsDescElement = document.getElementById('totalDestinationsDesc');
+            
+            if (totalDestinationsElement && totalDestinationsDescElement) {
+                totalDestinationsElement.innerHTML = '<span class="stat-error">N/A</span>';
+                totalDestinationsDescElement.innerHTML = '<span class="stat-error">Data tidak tersedia</span>';
+            }
+        }
+        
+        // ===== FALLBACK STATS =====
+        function loadFallbackStats() {
+            console.log('📊 Loading fallback stats...');
+            
+            // Show fallback numbers with animation
+            const totalReviewsElement = document.getElementById('totalReviews');
+            const totalReviewsDescElement = document.getElementById('totalReviewsDesc');
+            
+            if (totalReviewsElement && totalReviewsDescElement) {
+                animateNumber(totalReviewsElement, 0, 22000, 2000);
+                totalReviewsDescElement.textContent = 'Total review yang telah dianalisis';
+            }
+            
+            const totalDestinationsElement = document.getElementById('totalDestinations');
+            const totalDestinationsDescElement = document.getElementById('totalDestinationsDesc');
+            
+            if (totalDestinationsElement && totalDestinationsDescElement) {
+                animateNumber(totalDestinationsElement, 0, 30, 2000);
+                totalDestinationsDescElement.textContent = 'Destinasi yang telah dianalisis';
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize scroll effects
+            initializeScrollEffects();
+            
+            // Load dynamic stats with fallback
+            loadDynamicStats();
+            
+            // Set fallback timeout
+            setTimeout(() => {
+                const totalReviewsElement = document.getElementById('totalReviews');
+                if (totalReviewsElement && totalReviewsElement.innerHTML.includes('loading-spinner')) {
+                    console.log('⏰ Stats loading timeout, using fallback');
+                    loadFallbackStats();
+                }
+            }, 5000); // 5 second timeout
+        });
+    </script>
+</body>
+</html>
