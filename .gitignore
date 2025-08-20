@@ -65,9 +65,7 @@ logs/
 Thumbs.db
 
 # Models (if too large for git)
-models_h5_fixed/*.h5
-models/*.pkl
-models/*.joblib
+
 
 # Temporary files
 tmp/
