@@ -11,40 +11,61 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Deploy to server
-      uses: appleboy/ssh-action@v0.1.5
+      uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         password: ${{ secrets.PASSWORD }}
         script: |
-          echo "🚀 Starting deployment..."
+          echo "🚀 Starting clean deployment..."
           
-          # Navigate to app directory
+          # Navigate to project directory
           cd /var/www/html/batas.bpskotabatu.com
           
-          # Backup data
+          # Backup current data
           if [ -f "data/combined_batu_tourism_reviews_cleaned.csv" ]; then
-            cp data/combined_batu_tourism_reviews_cleaned.csv data/backups/backup_$(date +%Y%m%d_%H%M%S).csv
+            sudo cp data/combined_batu_tourism_reviews_cleaned.csv data/backups/auto_backup_$(date +%Y%m%d_%H%M%S).csv
+            echo "✅ Data backed up"
           fi
           
           # Pull latest code
-          git fetch origin
-          git reset --hard origin/main
+          sudo git fetch origin
+          sudo git reset --hard origin/main
+          echo "✅ Code updated"
           
-          # Update dependencies
-          venv/bin/pip install -r requirements.txt
+          # Install/update dependencies
+          sudo -u www-data venv/bin/pip install --upgrade pip
+          sudo -u www-data venv/bin/pip install -r requirements.txt
+          echo "✅ Dependencies updated"
           
           # Set permissions
-          chown -R www-data:www-data .
-          chmod -R 755 .
+          sudo chown -R www-data:www-data /var/www/html/batas.bpskotabatu.com
+          sudo chmod -R 755 /var/www/html/batas.bpskotabatu.com
+          sudo chmod -R 777 /var/www/html/batas.bpskotabatu.com/data
+          sudo chmod -R 777 /var/www/html/batas.bpskotabatu.com/logs
+          echo "✅ Permissions set"
           
           # Restart application
-          supervisorctl restart batas-app
+          sudo supervisorctl restart batas-app
+          echo "✅ Application restarted"
           
-          # Reload nginx
-          nginx -t && systemctl reload nginx
+          # Test Nginx configuration
+          sudo nginx -t && sudo systemctl reload nginx
+          echo "✅ Nginx reloaded"
           
-          echo "✅ Deployment completed!"
+          # Wait for app to start
+          sleep 10
+          
+          # Health check
+          if curl -f http://localhost:5000/health > /dev/null 2>&1; then
+            echo "✅ Application health check passed"
+          else
+            echo "⚠️ Application health check failed"
+            sudo supervisorctl status batas-app
+            sudo tail -10 /var/log/supervisor/batas-app.log
+          fi
+          
+          echo "🎉 Deployment completed!"
