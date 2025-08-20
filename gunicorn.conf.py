@@ -20,8 +20,8 @@ max_requests_jitter = 50
 preload_app = True
 
 # Logging
-accesslog = '/var/log/gunicorn-access.log'
-errorlog = '/var/log/gunicorn-error.log'
+accesslog = '/var/log/batas-app/gunicorn-access.log'
+errorlog  = '/var/log/batas-app/gunicorn-error.log'
 loglevel = 'info'
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
 
@@ -30,9 +30,7 @@ proc_name = 'batas-app'
 
 # Server mechanics
 daemon = False
-pidfile = '/var/run/batas-app.pid'
-user = 'www-data'
-group = 'www-data'
+pidfile = '/var/www/html/batas.bpskotabatu.com/runtime/batas-app.pid'
 tmp_upload_dir = '/var/www/html/batas.bpskotabatu.com/data/temp'
 
 # Environment
