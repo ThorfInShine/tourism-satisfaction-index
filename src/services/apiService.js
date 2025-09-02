@@ -3,8 +3,7 @@ import axios from 'axios';
 class ApiService {
   constructor() {
     // Determine base URL based on environment
-    const isProduction = window.location.hostname !== 'localhost';
-    const baseURL = isProduction ? '/api' : 'https://apibatas.bpskotabatu.com/api';
+    const baseURL = 'https://apibatas.bpskotabatu.com/api';
     
     this.api = axios.create({
       baseURL: baseURL,
