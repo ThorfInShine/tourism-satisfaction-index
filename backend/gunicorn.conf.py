@@ -9,7 +9,7 @@ backlog = 2048
 workers = multiprocessing.cpu_count() * 2 + 1
 worker_class = 'sync'
 worker_connections = 1000
-timeout = 6000000
+timeout = 600
 keepalive = 5
 
 # Restart workers after this many requests
