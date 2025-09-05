@@ -25,7 +25,18 @@ import {
   Eye,
   Clock,
   TrendingDown,
-  Activity
+  Activity,
+  Info,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  UserCheck,
+  UserX,
+  CalendarDays,
+  Briefcase,
+  Palmtree,
+  SortDesc,
+  Award
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -40,7 +51,7 @@ import { apiService } from '../services/apiService';
 // Utils
 import { cn } from '../utils/cn';
 
-// Helper Functions - MOVED OUTSIDE COMPONENT
+// Helper Functions
 const getComplaintLevelColor = (level) => {
   switch(level?.toLowerCase()) {
     case 'tinggi':
@@ -317,12 +328,199 @@ const ComplaintCarousel = ({ complaints, destinationName }) => {
   );
 };
 
+// New Methodology Section Component
+const MethodologySection = () => {
+  const [visitPatternData, setVisitPatternData] = useState({
+    weekend: 14329,
+    weekday: 11345,
+    holiday: 6369
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.5 }}
+      className="mt-8"
+    >
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <Info className="w-6 h-6 text-white" />
+            <h2 className="text-xl font-bold text-white">Metodologi Analisis</h2>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6">
+          {/* Title */}
+          <div className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white px-4 py-3 rounded-xl mb-6 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
+            <h3 className="font-bold">Penjelasan Metrik dan Kategori</h3>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div>
+              {/* Performance Level */}
+              <div className="mb-6">
+                <h4 className="text-gray-800 font-bold mb-4 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-cyan-600" />
+                  Performance Level (Berdasarkan Tingkat Keluhan):
+                </h4>
+                <div className="space-y-3">
+                  <motion.div 
+                    whileHover={{ x: 4 }}
+                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3"
+                  >
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div>
+                      <span className="font-bold text-gray-800">Perlu Perhatian Urgent</span>
+                      <span className="text-gray-600 ml-2">Keluhan {'>'} 20%</span>
+                    </div>
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ x: 4 }}
+                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3"
+                  >
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div>
+                      <span className="font-bold text-gray-800">Perlu Monitoring</span>
+                      <span className="text-gray-600 ml-2">Keluhan 10-20%</span>
+                    </div>
+                  </motion.div>
+                  <motion.div 
+                    whileHover={{ x: 4 }}
+                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center gap-3"
+                  >
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div>
+                      <span className="font-bold text-gray-800">Performa Excellent</span>
+                      <span className="text-gray-600 ml-2">Keluhan {'<'} 10%</span>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Visit Level - FIXED POSITION */}
+              <div className="mb-6">
+                <h4 className="text-gray-800 font-bold mb-4 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-cyan-600" />
+                  Tingkat Kunjungan:
+                </h4>
+                <div className="flex flex-wrap gap-3">
+                  <div className="inline-flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold">
+                    <Users className="w-4 h-4" />
+                    KUNJUNGAN TINGGI
+                  </div>
+                  <div className="inline-flex items-center gap-2 bg-yellow-500 text-white px-4 py-2 rounded-full text-sm font-bold">
+                    <UserCheck className="w-4 h-4" />
+                    KUNJUNGAN SEDANG
+                  </div>
+                  <div className="inline-flex items-center gap-2 bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-bold">
+                    <UserX className="w-4 h-4" />
+                    KUNJUNGAN RENDAH
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div>
+              {/* Visit Pattern Analysis */}
+              <div className="mb-6">
+                <h4 className="text-gray-800 font-bold mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-cyan-600" />
+                  Analisis Pola Kunjungan:
+                </h4>
+                <div className="space-y-3">
+                  {/* Weekend */}
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-green-500"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="w-5 h-5 text-green-600" />
+                        <span className="font-bold text-gray-800">Weekend</span>
+                      </div>
+                      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold">
+                        {visitPatternData.weekend.toLocaleString()} reviews
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Kunjungan terbanyak di akhir pekan. Wisatawan lebih aktif saat libur kerja.
+                    </p>
+                  </motion.div>
+
+                  {/* Weekday */}
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-yellow-500"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="w-5 h-5 text-yellow-600" />
+                        <span className="font-bold text-gray-800">Weekday</span>
+                      </div>
+                      <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold">
+                        {visitPatternData.weekday.toLocaleString()} reviews
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Kunjungan di hari kerja. Biasanya wisatawan lokal atau grup terorganisir.
+                    </p>
+                  </motion.div>
+
+                  {/* Holiday */}
+                  <motion.div 
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-white rounded-xl p-4 shadow-sm border-l-4 border-blue-500"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <Palmtree className="w-5 h-5 text-blue-600" />
+                        <span className="font-bold text-gray-800">Holiday</span>
+                      </div>
+                      <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold">
+                        {visitPatternData.holiday.toLocaleString()} reviews
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Kunjungan saat hari libur nasional. Peak season dengan volume tertinggi.
+                    </p>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Filter Info */}
+              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                <h5 className="font-bold text-green-800 mb-2 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Filter Waktu Keluhan:
+                </h5>
+                <div className="bg-green-100 rounded-lg p-3">
+                  <p className="text-sm text-green-700 font-medium mb-1">Keluhan Utama:</p>
+                  <p className="text-sm text-green-600">
+                    Menampilkan semua keluhan dalam rentang waktu 1 tahun terakhir untuk memberikan 
+                    gambaran yang lebih komprehensif tentang masalah yang dialami wisatawan.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const Analysis = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentFilter, setCurrentFilter] = useState('all');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [complaintData, setComplaintData] = useState(null);
   const [wisataAnalysis, setWisataAnalysis] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -345,16 +543,12 @@ const Analysis = () => {
   const loadAnalysisData = async () => {
     try {
       setLoading(true);
-      const [analysisData, complaintAnalysis, wisataData] = await Promise.all([
+      const [analysisData, wisataData] = await Promise.all([
         apiService.getAnalysisData(),
-        apiService.getComplaintAnalysis(),
         apiService.getAllWisataAnalysis()
       ]);
       
-      console.log('Complaint Analysis Data:', complaintAnalysis);
-      
       setData(analysisData);
-      setComplaintData(complaintAnalysis);
       setWisataAnalysis(wisataData);
       
     } catch (error) {
@@ -369,17 +563,12 @@ const Analysis = () => {
     try {
       setCurrentFilter(filterValue);
       setShowFilterDropdown(false);
-      setLoading(true);
       
-      const complaintAnalysis = await apiService.getComplaintAnalysis(filterValue);
-      setComplaintData(complaintAnalysis);
-      
-      toast.success(`Filter diterapkan: ${filterOptions.find(f => f.value === filterValue)?.label}`);
+      const selectedFilter = filterOptions.find(f => f.value === filterValue);
+      toast.success(`Filter diterapkan: ${selectedFilter?.label}`);
     } catch (error) {
       console.error('Failed to apply filter:', error);
       toast.error('Gagal menerapkan filter');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -456,57 +645,6 @@ const Analysis = () => {
               <p className="text-xl opacity-90">Insights & Rekomendasi untuk Peningkatan Destinasi Wisata</p>
             </div>
           </div>
-
-          {/* Filter Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 mb-8"
-          >
-            <div className="flex flex-col lg:flex-row items-center justify-center gap-4">
-              <div className="flex items-center gap-3">
-                <Filter className="w-6 h-6 text-purple-600" />
-                <span className="font-semibold text-gray-900 text-lg">Filter Analisis:</span>
-              </div>
-              
-              <div className="relative">
-                <button
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="flex items-center gap-3 bg-white border-2 border-gray-200 rounded-full px-6 py-3 font-semibold text-gray-700 hover:border-purple-500 hover:text-purple-600 transition-all duration-200 min-w-[280px] justify-between"
-                >
-                  <span>{currentFilterOption?.label}</span>
-                  <ChevronDown className={cn(
-                    "w-5 h-5 transition-transform duration-200",
-                    showFilterDropdown && "rotate-180"
-                  )} />
-                </button>
-
-                {showFilterDropdown && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50"
-                  >
-                    {filterOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => handleFilterChange(option.value)}
-                        className={cn(
-                          "w-full text-left px-4 py-3 hover:bg-purple-50 transition-colors",
-                          currentFilter === option.value && "bg-purple-100 text-purple-600"
-                        )}
-                      >
-                        <div className="font-medium">{option.label}</div>
-                        <div className="text-sm text-gray-500">{option.description}</div>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </div>
-            </div>
-          </motion.div>
         </motion.div>
 
         {/* Wisata Analysis Overview */}
@@ -689,7 +827,11 @@ const Analysis = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <i className="fas fa-map-marker-alt text-sm"></i>
-                        <span className="text-sm">Perlu Perhatian Urgent</span>
+                        <span className="text-sm">
+                          {destination.complaint_level === 'tinggi' ? 'Perlu Perhatian Urgent' :
+                           destination.complaint_level === 'sedang' ? 'Perlu Monitoring' :
+                           'Performa Excellent'}
+                        </span>
                         <div className="ml-auto bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase">
                           <i className={`${getComplaintLevelIcon(destination.complaint_level)} mr-1`}></i>
                           KUNJUNGAN {destination.visit_category || 'N/A'}
@@ -849,200 +991,8 @@ const Analysis = () => {
           </motion.div>
         )}
 
-        {/* Complaint Analysis Section - ADDED */}
-        {complaintData && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-8"
-          >
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-6 h-6 text-white" />
-                  <h2 className="text-xl font-bold text-white">Analisis Keluhan Wisatawan</h2>
-                </div>
-              </div>
-
-              <div className="p-6">
-                {complaintData.success && complaintData.total_complaints > 0 ? (
-                  <div>
-                    {/* Complaint Metrics */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                      <div className="bg-white rounded-xl border border-gray-200 p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <MessageSquare className="w-8 h-8 text-red-500" />
-                          <span className="text-2xl font-bold text-gray-900">
-                            {complaintData.total_complaints?.toLocaleString() || 0}
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-700">TOTAL KELUHAN</p>
-                        <p className="text-xs text-gray-500 mt-1">Keywords Detected</p>
-                      </div>
-
-                      <div className="bg-white rounded-xl border border-gray-200 p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <TrendingDown className="w-8 h-8 text-yellow-500" />
-                          <span className="text-2xl font-bold text-gray-900">
-                            {complaintData.total_negative_reviews?.toLocaleString() || 0}
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-700">REVIEW NEGATIF</p>
-                        <p className="text-xs text-gray-500 mt-1">Reviews Analyzed</p>
-                      </div>
-
-                      <div className="bg-white rounded-xl border border-gray-200 p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <BarChart3 className="w-8 h-8 text-cyan-500" />
-                          <span className="text-2xl font-bold text-gray-900">
-                            {complaintData.categories_found || 0}
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-700">KATEGORI KELUHAN</p>
-                        <p className="text-xs text-gray-500 mt-1">Categories Found</p>
-                      </div>
-
-                      <div className="bg-white rounded-xl border border-gray-200 p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <Target className="w-8 h-8 text-red-500" />
-                          <span className="text-2xl font-bold text-gray-900">
-                            {complaintData.trend_analysis?.percentage?.toFixed(1) || 0}%
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-700">TINGKAT KELUHAN</p>
-                        <p className="text-xs text-gray-500 mt-1 uppercase">
-                          {complaintData.trend_analysis?.trend || 'MODERATE'}
-                        </p>
-                        {/* Progress bar */}
-                        <div className="mt-2 bg-gray-200 rounded-full h-2 overflow-hidden">
-                          <div 
-                            className={cn(
-                              "h-full transition-all duration-500",
-                              complaintData.trend_analysis?.percentage >= 60 ? "bg-red-500" :
-                              complaintData.trend_analysis?.percentage >= 30 ? "bg-yellow-500" :
-                              "bg-green-500"
-                            )}
-                            style={{ width: `${complaintData.trend_analysis?.percentage || 0}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Top Complaints */}
-                    {complaintData.top_complaints && complaintData.top_complaints.length > 0 && (
-                      <div className="mb-6">
-                        <h3 className="text-lg font-bold text-gray-900 mb-4">Top Kategori Keluhan</h3>
-                        <div className="grid gap-4">
-                          {complaintData.top_complaints.slice(0, 5).map(([category, details], index) => {
-                            const categoryInfo = details.category_info || {
-                              display_name: category,
-                              description: `Keluhan terkait ${category}`,
-                              icon: 'fas fa-exclamation-circle',
-                              color: '#EF4444'
-                            };
-                            
-                            return (
-                              <div
-                                key={category}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow"
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-sm">
-                                    <i className={`${categoryInfo.icon} text-lg`} style={{ color: categoryInfo.color }}></i>
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold text-gray-900">
-                                      #{index + 1} {categoryInfo.display_name}
-                                    </h4>
-                                    <p className="text-sm text-gray-600">{categoryInfo.description}</p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-2xl font-bold" style={{ color: categoryInfo.color }}>
-                                    {details.total_count || 0}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {details.percentage?.toFixed(1) || 0}%
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Insights */}
-                    {complaintData.insights && complaintData.insights.length > 0 && (
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                          <Lightbulb className="w-5 h-5 text-yellow-500" />
-                          Insights & Rekomendasi
-                        </h3>
-                        <div className="grid gap-4">
-                          {complaintData.insights.map((insight, index) => (
-                            <div
-                              key={index}
-                              className={cn(
-                                "p-4 rounded-xl border-l-4",
-                                insight.type === 'danger' && "bg-red-50 border-red-500",
-                                insight.type === 'warning' && "bg-yellow-50 border-yellow-500",
-                                insight.type === 'info' && "bg-blue-50 border-blue-500",
-                                insight.type === 'success' && "bg-green-50 border-green-500"
-                              )}
-                            >
-                              <div className="flex items-start gap-3">
-                                <i className={`${insight.icon} text-lg mt-1`}></i>
-                                <div>
-                                  <h4 className="font-semibold text-gray-900 mb-1">
-                                    {insight.title}
-                                  </h4>
-                                  <p className="text-gray-700">{insight.description}</p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Analysis Trend */}
-                    {complaintData.trend_analysis && (
-                      <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Activity className="w-5 h-5 text-blue-600" />
-                          <h4 className="font-semibold text-gray-900">Analisis Trend:</h4>
-                        </div>
-                        <p className="text-gray-700">
-                          Dari {complaintData.total_negative_reviews?.toLocaleString() || 0} review negatif, 
-                          terdeteksi {complaintData.total_complaints?.toLocaleString() || 0} keyword keluhan 
-                          dalam {complaintData.categories_found || 0} kategori. 
-                          Top 3 kategori menyumbang {
-                            complaintData.top_complaints?.slice(0, 3)
-                              .reduce((acc, [_, details]) => acc + (details.percentage || 0), 0)
-                              .toFixed(1) || 0
-                          }% dari total keluhan.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <i className="fas fa-smile text-2xl text-green-600"></i>
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Excellent Performance!</h3>
-                    <p className="text-gray-600">
-                      Tidak ada keluhan signifikan terdeteksi untuk filter {currentFilterOption?.label}.
-                      Semua destinasi memiliki feedback yang positif.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
+        {/* Methodology Section - WITHOUT SORTING INFO */}
+        <MethodologySection />
 
         {/* Detail Modal */}
         <DetailModal
@@ -1056,7 +1006,7 @@ const Analysis = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="flex justify-center"
+          className="flex justify-center mt-8"
         >
           <button
             onClick={loadAnalysisData}

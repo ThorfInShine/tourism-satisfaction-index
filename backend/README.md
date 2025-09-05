@@ -1,1 +1,0 @@
-# tourism-satisfaction-index

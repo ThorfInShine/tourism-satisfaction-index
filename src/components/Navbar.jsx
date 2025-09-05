@@ -72,32 +72,39 @@ const Navbar = ({ user, isAuthenticated, onLogout }) => {
               "font-bold text-lg transition-colors duration-300",
               shouldBeTransparent ? "text-white drop-shadow-lg" : "text-gray-900"
             )}>
-              Tourism Analytics
+              BATAS - Batu Tourism Analysis System
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
-                  isActivePath(item.path)
-                    ? "bg-blue-600 text-white shadow-lg"
-                    : shouldBeTransparent
-                    ? "text-white/90 hover:text-white hover:bg-white/20 drop-shadow-sm"
-                    : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
-                )}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </div>
-
-          {/* User Menu */}
+          {/* Right Side Container - Desktop */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Navigation Items */}
+            <div className="flex items-center space-x-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                    isActivePath(item.path)
+                      ? "bg-blue-600 text-white shadow-lg"
+                      : shouldBeTransparent
+                      ? "text-white/90 hover:text-white hover:bg-white/20 drop-shadow-sm"
+                      : "text-gray-700 hover:text-blue-600 hover:bg-blue-50"
+                  )}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className={cn(
+              "h-6 w-px",
+              shouldBeTransparent ? "bg-white/30" : "bg-gray-300"
+            )} />
+
+            {/* User Menu */}
             {isAuthenticated ? (
               <div className="relative user-menu-container">
                 <button

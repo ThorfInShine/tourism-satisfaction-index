@@ -3,23 +3,26 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   BarChart3, 
-  TrendingUp, 
-  Users, 
-  MapPin,
-  ArrowRight,
-  Star,
-  BarChart, // Changed from ChartBar to BarChart
-  Brain
+  PieChart,
+  Lightbulb,
+  TreePine,
+  ChevronDown
 } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import LoadingSpinner from '../components/LoadingSpinner';
 
+// Images
+const tourismImage = "https://res.cloudinary.com/dk2tex4to/image/upload/v1755629984/Desain_tanpa_judul-removebg-preview_izdxie.png";
+const statsImage = "https://res.cloudinary.com/dk2tex4to/image/upload/v1755625548/ChatGPT_Image_Aug_20__2025__12_35_04_AM-removebg-preview_gttvad.png";
+
 const HomePage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
     loadStats();
+    setupScrollListener();
   }, []);
 
   const loadStats = async () => {
@@ -28,7 +31,6 @@ const HomePage = () => {
       setStats(data);
     } catch (error) {
       console.error('Failed to load stats:', error);
-      // Fallback stats
       setStats({
         total_reviews: 22000,
         total_destinations: 30
@@ -38,282 +40,408 @@ const HomePage = () => {
     }
   };
 
+  const setupScrollListener = () => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const heroHeight = window.innerHeight;
+      
+      if (scrollPosition > heroHeight * 0.8) {
+        setShowContent(true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  };
+
+  const scrollToContent = () => {
+    window.scrollTo({
+      top: window.innerHeight,
+      behavior: 'smooth'
+    });
+  };
+
   const features = [
     {
-      icon: BarChart3, // Changed from ChartBar to BarChart3
+      icon: PieChart,
       title: 'Dashboard Interaktif',
-      description: 'Visualisasi data real-time dengan charts dan statistik yang mudah dipahami untuk pengambilan keputusan cepat.',
-      gradient: 'from-blue-500 to-cyan-500'
+      description: 'Visualisasi data real-time dengan charts dan statistik yang mudah dipahami, untuk pengambilan keputusan cepat.',
+      gradient: 'from-blue-500 to-blue-700'
     },
     {
-      icon: Brain,
+      icon: TreePine,
       title: 'Analisis Sentimen AI',
       description: 'Teknologi Natural Language Processing untuk menganalisis sentimen dan emosi dari review wisatawan secara otomatis.',
-      gradient: 'from-green-500 to-emerald-500'
+      gradient: 'from-green-500 to-green-700'
     },
     {
-      icon: TrendingUp,
+      icon: Lightbulb,
       title: 'Rekomendasi Cerdas',
       description: 'Saran perbaikan prioritas berdasarkan analisis data untuk meningkatkan kualitas destinasi wisata.',
-      gradient: 'from-orange-500 to-yellow-500'
+      gradient: 'from-amber-500 to-orange-600'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Hero Section */}
-      <section className="relative pt-20 pb-16 overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600" />
-        <div className="absolute inset-0 bg-black/20" />
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Left Content */}
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="text-center lg:text-left"
-            >
-              {/* Speech Bubble */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
-                className="relative bg-green-500 rounded-3xl p-6 mb-8 shadow-2xl"
-              >
-                <h1 className="text-2xl lg:text-3xl font-bold text-white leading-tight">
-                  Bagaimana Tingkat Kepuasan Wisatawan di Kota Batu?
-                </h1>
-                {/* Speech bubble tail */}
-                <div className="absolute -bottom-3 left-12 w-0 h-0 border-l-[15px] border-r-[15px] border-t-[15px] border-l-transparent border-r-transparent border-t-green-500" />
-              </motion.div>
-
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-                className="text-xl text-white/90 mb-8 leading-relaxed"
-              >
-                Platform canggih untuk menganalisis kepuasan wisatawan menggunakan 
-                Machine Learning dan Natural Language Processing. Dapatkan insights mendalam 
-                dari review wisatawan untuk meningkatkan kualitas destinasi wisata.
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.6 }}
-              >
-                <Link
-                  to="/dashboard"
-                  className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-full text-lg shadow-2xl hover:shadow-orange-500/25 transform hover:scale-105 transition-all duration-300"
-                >
-                  <BarChart3 className="w-6 h-6 mr-3" />
-                  Mulai Analisis
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Link>
-              </motion.div>
-            </motion.div>
-
-            {/* Right Illustration - Placeholder */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative"
-            >
-              <div className="w-full max-w-md mx-auto h-96 bg-white/10 rounded-3xl flex items-center justify-center backdrop-blur-sm border border-white/20">
-                <div className="text-center text-white">
-                  <BarChart3 className="w-24 h-24 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg opacity-75">Tourism Analytics</p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Fitur Unggulan Platform
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Teknologi terdepan untuk analisis kepuasan wisatawan yang komprehensif
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                whileHover={{ y: -10 }}
-                className="bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border border-gray-100"
-              >
-                <div className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 shadow-lg`}>
-                  <feature.icon className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-3xl p-8 lg:p-12 shadow-xl border border-blue-100"
-          >
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              {/* Stats Content */}
-              <div>
-                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-8">
-                  Data Terkini Platform
-                </h2>
-                
-                {loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <LoadingSpinner size="large" />
-                  </div>
-                ) : (
-                  <div className="grid sm:grid-cols-2 gap-8">
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.6 }}
-                      className="text-center"
-                    >
-                      <div className="text-5xl font-bold text-blue-600 mb-2">
-                        {stats?.total_reviews?.toLocaleString() || '22,000'}
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900 mb-2">
-                        Review Diproses
-                      </div>
-                      <div className="text-gray-600">
-                        Total review yang telah dianalisis
-                      </div>
-                    </motion.div>
-                    
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.6, delay: 0.2 }}
-                      className="text-center"
-                    >
-                      <div className="text-5xl font-bold text-purple-600 mb-2">
-                        {stats?.total_destinations || '30'}
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900 mb-2">
-                        Destinasi Wisata
-                      </div>
-                      <div className="text-gray-600">
-                        Destinasi yang telah dianalisis
-                      </div>
-                    </motion.div>
-                  </div>
-                )}
-              </div>
-
-              {/* Illustration Placeholder */}
-              <motion.div
-                initial={{ opacity: 0, x: 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8 }}
-                className="relative"
-              >
-                <div className="w-full max-w-sm mx-auto h-64 bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl flex items-center justify-center">
-                  <div className="text-center">
-                    <Users className="w-16 h-16 mx-auto mb-4 text-blue-600" />
-                    <p className="text-gray-700 font-medium">Tourist Analytics</p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h2 className="text-4xl font-bold text-white mb-6">
-              Siap untuk Menganalisis Data Wisatawan?
-            </h2>
-            <p className="text-xl text-white/90 mb-8">
-              Mulai journey Anda dalam memahami kepuasan wisatawan dengan teknologi AI terdepan
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center px-8 py-4 bg-white text-blue-600 font-semibold rounded-full text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-              >
-                <BarChart3 className="w-6 h-6 mr-3" />
-                Lihat Dashboard
-              </Link>
-              <Link
-                to="/analysis"
-                className="inline-flex items-center px-8 py-4 bg-transparent border-2 border-white text-white font-semibold rounded-full text-lg hover:bg-white hover:text-blue-600 transition-all duration-300"
-              >
-                <BarChart className="w-6 h-6 mr-3" />
-                Mulai Analisis
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg">Tourism Analytics</span>
-            </div>
-            <div className="text-gray-400 text-sm">
-              © 2024 Analisis Kepuasan Wisatawan Kota Batu. All rights reserved.
-            </div>
-          </div>
-        </div>
-      </footer>
+    <div 
+      className="min-h-screen" 
+      style={{
+        background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ec4899 100%)',
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+      }}
+    >
+      <HeroSection 
+        tourismImage={tourismImage} 
+        scrollToContent={scrollToContent} 
+      />
+      
+      <FeaturesSection 
+        features={features} 
+        showContent={showContent} 
+      />
+      
+      <StatsSection 
+        stats={stats} 
+        loading={loading} 
+        showContent={showContent} 
+        statsImage={statsImage} 
+      />
+      
+      <Footer showContent={showContent} />
     </div>
   );
 };
+
+// Hero Section Component
+const HeroSection = ({ tourismImage, scrollToContent }) => (
+  <section className="h-screen relative overflow-hidden flex items-center">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="grid lg:grid-cols-2 gap-12 items-center">
+        
+        {/* Hero Image */}
+        <motion.div
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8 }}
+          className="flex justify-center items-center lg:order-1 order-2"
+        >
+          <div className="relative h-[500px] flex items-center justify-center p-8">
+            <motion.img 
+              src={tourismImage}
+              alt="Travel Illustration" 
+              className="w-full max-w-[450px] h-auto"
+              animate={{ y: [0, -15, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              style={{ filter: 'drop-shadow(0 10px 30px rgba(0, 0, 0, 0.2))' }}
+            />
+          </div>
+        </motion.div>
+
+        {/* Hero Content */}
+        <motion.div
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="lg:order-2 order-1"
+        >
+          <HeroTitle />
+          <HeroDescription />
+          <HeroActions scrollToContent={scrollToContent} />
+        </motion.div>
+      </div>
+    </div>
+
+    <ScrollIndicator onClick={scrollToContent} />
+  </section>
+);
+
+// Hero Title Component
+const HeroTitle = () => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.3, duration: 0.6 }}
+    className="mb-8"
+  >
+    <h1 className="text-2xl lg:text-6xl font-extrabold text-white leading-tight">
+      Data Bicara: 
+      <span className="block text-xl lg:text-3xl mt-2 text-white/90">
+        Bagaimana Tingkat Kepuasan di Kota Batu?
+      </span>
+    </h1>
+  </motion.div>
+);
+
+// Hero Description Component
+const HeroDescription = () => (
+  <motion.p
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.5, duration: 0.6 }}
+    className="text-lg text-white/95 mb-10 leading-relaxed max-w-[550px] text-justify"
+  >
+    Platform canggih untuk menganalisis kepuasan wisatawan menggunakan 
+    Machine Learning dan Natural Language Processing. Dapatkan insights mendalam 
+    dari review wisatawan untuk meningkatkan kualitas destinasi wisata.
+  </motion.p>
+);
+
+// Hero Actions Component
+const HeroActions = ({ scrollToContent }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: 0.7, duration: 0.6 }}
+    className="space-y-6"
+  >
+    <Link
+      to="/dashboard"
+      className="inline-flex items-center px-12 py-5 bg-gradient-to-r from-orange-500 to-yellow-600 text-white font-semibold rounded-full text-xl shadow-2xl hover:shadow-orange-500/30 transform hover:scale-105 hover:-translate-y-1 transition-all duration-300"
+    >
+      <BarChart3 className="w-6 h-6 mr-3" />
+      Mulai Analisis
+    </Link>
+    
+    <div>
+      <button
+        onClick={scrollToContent}
+        className="inline-flex items-center text-white/80 hover:text-white transition-colors duration-300 group"
+      >
+        <span className="mr-2">Lihat Fitur Lengkap</span>
+        <ChevronDown className="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300" />
+      </button>
+    </div>
+  </motion.div>
+);
+
+// Scroll Indicator Component
+const ScrollIndicator = ({ onClick }) => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay: 1.5, duration: 0.8 }}
+    className="absolute bottom-8 left-1/2 transform -translate-x-1/2 cursor-pointer"
+    onClick={onClick}
+  >
+    <motion.div
+      animate={{ y: [0, 10, 0] }}
+      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center hover:border-white/80 transition-colors duration-300"
+    >
+      <motion.div
+        animate={{ y: [0, 12, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        className="w-1 h-3 bg-white/70 rounded-full mt-2"
+      />
+    </motion.div>
+  </motion.div>
+);
+
+// Features Section Component
+const FeaturesSection = ({ features, showContent }) => (
+  <motion.section 
+    className="py-16 relative z-2"
+    initial={{ opacity: 0, y: 50 }}
+    animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+    transition={{ duration: 0.8 }}
+  >
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+        transition={{ duration: 0.8 }}
+        className="text-center mb-16"
+      >
+        <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
+          Fitur Unggulan
+        </h2>
+        <p className="text-white/80 text-xl max-w-3xl mx-auto leading-relaxed">
+          Teknologi terdepan untuk analisis kepuasan wisatawan
+        </p>
+      </motion.div>
+
+      <div className="grid lg:grid-cols-3 gap-8">
+        {features.map((feature, index) => (
+          <FeatureCard 
+            key={index}
+            feature={feature}
+            index={index}
+            showContent={showContent}
+          />
+        ))}
+      </div>
+    </div>
+  </motion.section>
+);
+
+// Feature Card Component
+const FeatureCard = ({ feature, index, showContent }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 50 }}
+    animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+    transition={{ duration: 0.6, delay: showContent ? index * 0.2 : 0 }}
+    whileHover={{ y: -10, scale: 1.02 }}
+    className="bg-white/95 backdrop-blur-md border border-white/20 rounded-3xl p-8 text-center shadow-2xl hover:shadow-3xl transition-all duration-300 h-full"
+  >
+    <div className={`w-20 h-20 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mx-auto mb-6 text-white shadow-lg`}>
+      <feature.icon className="w-10 h-10" />
+    </div>
+    <h3 className="text-2xl font-bold text-gray-900 mb-4">
+      {feature.title}
+    </h3>
+    <p className="text-gray-600 leading-relaxed">
+      {feature.description}
+    </p>
+  </motion.div>
+);
+
+// Animated Number Component
+const AnimatedNumber = ({ value, suffix = '', showContent }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (!value || !showContent) return;
+    
+    const duration = 2000;
+    const startTime = Date.now();
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const current = Math.floor(value * easeOutQuart);
+      
+      setDisplayValue(current);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }, [value, showContent]);
+
+  const formatNumber = (num) => {
+    if (num >= 1000) {
+      const thousands = Math.floor(num / 1000);
+      const remainder = num % 1000;
+      return remainder === 0 || num >= 10000 
+        ? `${thousands}k`
+        : `${thousands}.${Math.floor(remainder / 100)}k`;
+    }
+    return num.toString();
+  };
+
+  return <span>{formatNumber(displayValue)}{suffix}</span>;
+};
+
+// Stats Section Component
+const StatsSection = ({ stats, loading, showContent, statsImage }) => (
+  <motion.section 
+    className="py-12 relative z-2"
+    initial={{ opacity: 0, y: 50 }}
+    animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+    transition={{ duration: 0.8, delay: 0.3 }}
+  >
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <motion.div
+        className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-2xl border border-white/10"
+        initial={{ opacity: 0, y: 50 }}
+        animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+          <StatsContent stats={stats} loading={loading} showContent={showContent} />
+          <StatsIllustration statsImage={statsImage} showContent={showContent} />
+        </div>
+      </motion.div>
+    </div>
+  </motion.section>
+);
+
+// Stats Content Component
+const StatsContent = ({ stats, loading, showContent }) => (
+  <div className="flex flex-col sm:flex-row gap-16 flex-1 justify-center">
+    {loading ? (
+      <div className="flex items-center justify-center py-12">
+        <LoadingSpinner size="large" />
+      </div>
+    ) : (
+      <>
+        <StatItem
+          value={stats?.total_reviews || 22000}
+          title="Review Diproses"
+          subtitle="Total review yang telah dianalisis"
+          showContent={showContent}
+          delay={0}
+        />
+        <StatItem
+          value={stats?.total_destinations || 30}
+          title="Destinasi Wisata"
+          subtitle="Destinasi yang telah dianalisis"
+          showContent={showContent}
+          delay={0.2}
+        />
+      </>
+    )}
+  </div>
+);
+
+// Stat Item Component - UKURAN DIPERKECIL
+const StatItem = ({ value, title, subtitle, showContent, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.8 }}
+    animate={showContent ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+    transition={{ duration: 0.6, delay }}
+    className="text-center flex-1"
+  >
+    <div className="text-4xl lg:text-6xl font-extrabold text-blue-600 mb-3 leading-none">
+      <AnimatedNumber value={value} showContent={showContent} />
+    </div>
+    <div className="text-lg lg:text-xl font-bold text-gray-900 mb-2">
+      {title}
+    </div>
+    <div className="text-gray-600 text-sm lg:text-base">
+      {subtitle}
+    </div>
+  </motion.div>
+);
+
+// Stats Illustration Component
+const StatsIllustration = ({ statsImage, showContent }) => (
+  <motion.div
+    initial={{ opacity: 0, x: 50 }}
+    animate={showContent ? { opacity: 1, x: 0 } : { opacity: 0, x: 50 }}
+    transition={{ duration: 0.8 }}
+    className="flex-shrink-0 flex items-center justify-center"
+  >
+    <motion.img 
+      src={statsImage}
+      alt="Tourist Stats" 
+      className="w-64 h-auto"
+      animate={{ y: [0, -10, 0] }}
+      transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+      style={{ filter: 'drop-shadow(0 5px 20px rgba(0, 0, 0, 0.1))' }}
+    />
+  </motion.div>
+);
+
+// Footer Component
+const Footer = ({ showContent }) => (
+  <motion.footer 
+    className="bg-black/20 backdrop-blur-md py-8 text-white/80 text-center mt-16"
+    initial={{ opacity: 0 }}
+    animate={showContent ? { opacity: 1 } : { opacity: 0 }}
+    transition={{ duration: 0.8, delay: 0.5 }}
+  >
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="text-lg">
+        © 2025 Analisis Kepuasan Wisatawan Kota Batu
+      </div>
+    </div>
+  </motion.footer>
+);
 
 export default HomePage;

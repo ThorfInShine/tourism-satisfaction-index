@@ -13,7 +13,11 @@ import {
   Minus,
   RefreshCw,
   PieChart,
-  Activity
+  Activity,
+  AlertTriangle,
+  Target,
+  Lightbulb,
+  TrendingDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -28,12 +32,262 @@ import { apiService } from '../services/apiService';
 // Utils
 import { cn } from '../utils/cn';
 
+// Update the DestinationsList component's loadDestinations function
+const DestinationsList = ({ filter, data }) => {
+  const [destinations, setDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDestinations();
+  }, [filter]);
+
+  const loadDestinations = async () => {
+    try {
+      setLoading(true);
+      const analysisData = await apiService.getAllWisataAnalysis();
+      
+      if (analysisData.success && analysisData.destinations) {
+        // Filter destinations based on visit category
+        let filtered = Object.entries(analysisData.destinations);
+        
+        if (filter !== 'all') {
+          filtered = filtered.filter(([name, dest]) => {
+            // Check multiple possible field names for visit category
+            const visitCategory = (
+              dest.visit_category || 
+              dest.visit_level || 
+              dest.kunjungan_level || 
+              dest.kunjungan_category ||
+              ''
+            ).toLowerCase();
+            
+            // Also check based on visit_count if category is not available
+            const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
+            
+            // If we have visit category, use it
+            if (visitCategory) {
+              if (filter === 'high') return visitCategory === 'tinggi' || visitCategory === 'high';
+              if (filter === 'medium') return visitCategory === 'sedang' || visitCategory === 'medium';
+              if (filter === 'low') return visitCategory === 'rendah' || visitCategory === 'low';
+            } 
+            // Otherwise, determine based on visit count
+            else if (visitCount > 0) {
+              if (filter === 'high') return visitCount >= 1000;
+              if (filter === 'medium') return visitCount >= 500 && visitCount < 1000;
+              if (filter === 'low') return visitCount < 500;
+            }
+            
+            // If no data available, include in all filters
+            return false;
+          });
+        }
+        
+        // Sort by visit count descending
+        filtered.sort((a, b) => {
+          const countA = a[1].visit_count || a[1].jumlah_kunjungan || 0;
+          const countB = b[1].visit_count || b[1].jumlah_kunjungan || 0;
+          return countB - countA;
+        });
+        
+        setDestinations(filtered);
+        
+        // Log for debugging
+        console.log(`Filter: ${filter}, Found ${filtered.length} destinations`);
+        if (filtered.length > 0) {
+          console.log('Sample destination:', filtered[0][1]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load destinations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to determine visit category for display
+  const getVisitCategory = (dest) => {
+    // First check if category is already defined
+    const category = dest.visit_category || dest.visit_level || dest.kunjungan_level || dest.kunjungan_category;
+    if (category) {
+      return category.toLowerCase();
+    }
+    
+    // Otherwise determine based on visit count
+    const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
+    if (visitCount >= 1000) return 'tinggi';
+    if (visitCount >= 500) return 'sedang';
+    return 'rendah';
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner size="medium" />
+        </div>
+      </div>
+    );
+  }
+
+  if (destinations.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+        <div className="text-center py-8">
+          <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-600">Tidak ada destinasi untuk filter ini</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {filter === 'high' && 'Destinasi dengan kunjungan ≥ 1000'}
+            {filter === 'medium' && 'Destinasi dengan kunjungan 500-999'}
+            {filter === 'low' && 'Destinasi dengan kunjungan < 500'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Users className="w-6 h-6 text-white" />
+            <h2 className="text-xl font-bold text-white">
+              Daftar Destinasi Wisata
+            </h2>
+          </div>
+          <span className="bg-white/20 px-3 py-1 rounded-full text-sm text-white font-medium">
+            {destinations.length} Destinasi
+          </span>
+        </div>
+      </div>
+
+      <div className="p-6">
+        <div className="grid gap-4">
+          {destinations.map(([name, dest], index) => {
+            const complaintLevel = dest.complaint_level?.toLowerCase();
+            const visitCategory = getVisitCategory(dest);
+            const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
+            
+            return (
+              <motion.div
+                key={name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-200"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow-sm">
+                      <span className="text-lg font-bold text-gray-600">
+                        {index + 1}
+                      </span>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-semibold text-gray-900 text-lg">
+                        {name}
+                      </h3>
+                      
+                      <div className="flex items-center gap-4 mt-1">
+                        {/* Rating */}
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          <span className="text-sm font-medium text-gray-700">
+                            {dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0'}
+                          </span>
+                        </div>
+                        
+                        {/* Reviews Count */}
+                        <div className="flex items-center gap-1">
+                          <MessageSquare className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm text-gray-600">
+                            {dest.total_reviews?.toLocaleString() || 0} reviews
+                          </span>
+                        </div>
+                        
+                        {/* Visit Count */}
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4 text-green-500" />
+                          <span className="text-sm text-gray-600">
+                            {visitCount.toLocaleString()} kunjungan
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {/* Visit Category Badge */}
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-xs font-semibold uppercase",
+                      visitCategory === 'tinggi' && "bg-green-100 text-green-700",
+                      visitCategory === 'sedang' && "bg-yellow-100 text-yellow-700",
+                      visitCategory === 'rendah' && "bg-red-100 text-red-700"
+                    )}>
+                      {visitCategory || 'N/A'}
+                    </span>
+                    
+                    {/* Complaint Level Indicator */}
+                    <div className="text-center">
+                      <div className={cn(
+                        "text-2xl font-bold",
+                        complaintLevel === 'tinggi' && "text-red-500",
+                        complaintLevel === 'sedang' && "text-yellow-500",
+                        complaintLevel === 'rendah' && "text-green-500"
+                      )}>
+                        {dest.complaint_percentage?.toFixed(1) || '0.0'}%
+                      </div>
+                      <div className="text-xs text-gray-500">Keluhan</div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Progress Bar for Sentiment Distribution */}
+                <div className="mt-3">
+                  <div className="flex h-2 rounded-full overflow-hidden bg-gray-200">
+                    <div 
+                      className="bg-green-500 transition-all duration-500"
+                      style={{ width: `${dest.positive_percentage || 0}%` }}
+                    />
+                    <div 
+                      className="bg-yellow-500 transition-all duration-500"
+                      style={{ width: `${dest.neutral_percentage || 0}%` }}
+                    />
+                    <div 
+                      className="bg-red-500 transition-all duration-500"
+                      style={{ width: `${dest.complaint_percentage || dest.negative_percentage || 0}%` }}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-between mt-1">
+                    <span className="text-xs text-green-600">
+                      Positif: {dest.positive_percentage?.toFixed(1) || 0}%
+                    </span>
+                    <span className="text-xs text-yellow-600">
+                      Netral: {dest.neutral_percentage?.toFixed(1) || 0}%
+                    </span>
+                    <span className="text-xs text-red-600">
+                      Negatif: {(dest.complaint_percentage || dest.negative_percentage || 0).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Dashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentFilter, setCurrentFilter] = useState('all');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [quadrantData, setQuadrantData] = useState(null);
+  const [complaintData, setComplaintData] = useState(null);
 
   const filterOptions = [
     { value: 'all', label: '🌍 Semua Kunjungan', description: 'Seluruh destinasi wisata' },
@@ -73,6 +327,15 @@ const Dashboard = () => {
         }
       } else {
         setQuadrantData(null);
+      }
+
+      // Load complaint analysis data
+      try {
+        const complaintAnalysis = await apiService.getComplaintAnalysis(filter);
+        setComplaintData(complaintAnalysis);
+      } catch (error) {
+        console.error('Complaint analysis data not available:', error);
+        setComplaintData(null);
       }
       
       // Update current filter
@@ -230,6 +493,16 @@ const Dashboard = () => {
           </motion.div>
         </motion.div>
 
+        {/* Destinations List Section - NEW */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="mb-8"
+        >
+          <DestinationsList filter={currentFilter} data={data} />
+        </motion.div>
+
         {/* Metrics Cards */}
         {data?.metrics && (
           <motion.div
@@ -376,7 +649,7 @@ const Dashboard = () => {
           </motion.div>
         )}
 
-        {/* Quadrant Analysis - Positioned right before Refresh Button, only for 'all' filter */}
+        {/* Quadrant Analysis - Positioned right before Complaint Analysis, only for 'all' filter */}
         {currentFilter === 'all' && quadrantData && quadrantData.success && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -393,11 +666,206 @@ const Dashboard = () => {
           </motion.div>
         )}
 
+        {/* Complaint Analysis Section - MOVED FROM ANALYSIS TAB */}
+        {complaintData && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.1 }}
+            className="mb-8"
+          >
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-red-500 to-orange-500 px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-6 h-6 text-white" />
+                  <h2 className="text-xl font-bold text-white">Analisis Keluhan Wisatawan</h2>
+                </div>
+              </div>
+
+              <div className="p-6">
+                {complaintData.success && complaintData.total_complaints > 0 ? (
+                  <div>
+                    {/* Complaint Metrics */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                      <div className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <MessageSquare className="w-8 h-8 text-red-500" />
+                          <span className="text-2xl font-bold text-gray-900">
+                            {complaintData.total_complaints?.toLocaleString() || 0}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-700">TOTAL KELUHAN</p>
+                        <p className="text-xs text-gray-500 mt-1">Keywords Detected</p>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <TrendingDown className="w-8 h-8 text-yellow-500" />
+                          <span className="text-2xl font-bold text-gray-900">
+                            {complaintData.total_negative_reviews?.toLocaleString() || 0}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-700">REVIEW NEGATIF</p>
+                        <p className="text-xs text-gray-500 mt-1">Reviews Analyzed</p>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <BarChart3 className="w-8 h-8 text-cyan-500" />
+                          <span className="text-2xl font-bold text-gray-900">
+                            {complaintData.categories_found || 0}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-700">KATEGORI KELUHAN</p>
+                        <p className="text-xs text-gray-500 mt-1">Categories Found</p>
+                      </div>
+
+                      <div className="bg-white rounded-xl border border-gray-200 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <Target className="w-8 h-8 text-red-500" />
+                          <span className="text-2xl font-bold text-gray-900">
+                            {complaintData.trend_analysis?.percentage?.toFixed(1) || 0}%
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-700">TINGKAT KELUHAN</p>
+                        <p className="text-xs text-gray-500 mt-1 uppercase">
+                          {complaintData.trend_analysis?.trend || 'MODERATE'}
+                        </p>
+                        {/* Progress bar */}
+                        <div className="mt-2 bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className={cn(
+                              "h-full transition-all duration-500",
+                              complaintData.trend_analysis?.percentage >= 60 ? "bg-red-500" :
+                              complaintData.trend_analysis?.percentage >= 30 ? "bg-yellow-500" :
+                              "bg-green-500"
+                            )}
+                            style={{ width: `${complaintData.trend_analysis?.percentage || 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top Complaints */}
+                    {complaintData.top_complaints && complaintData.top_complaints.length > 0 && (
+                      <div className="mb-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Top Kategori Keluhan</h3>
+                        <div className="grid gap-4">
+                          {complaintData.top_complaints.slice(0, 5).map(([category, details], index) => {
+                            const categoryInfo = details.category_info || {
+                              display_name: category,
+                              description: `Keluhan terkait ${category}`,
+                              icon: 'fas fa-exclamation-circle',
+                              color: '#EF4444'
+                            };
+                            
+                            return (
+                              <div
+                                key={category}
+                                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-md transition-shadow"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white shadow-sm">
+                                    <i className={`${categoryInfo.icon} text-lg`} style={{ color: categoryInfo.color }}></i>
+                                  </div>
+                                  <div>
+                                    <h4 className="font-semibold text-gray-900">
+                                      #{index + 1} {categoryInfo.display_name}
+                                    </h4>
+                                    <p className="text-sm text-gray-600">{categoryInfo.description}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-2xl font-bold" style={{ color: categoryInfo.color }}>
+                                    {details.total_count || 0}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {details.percentage?.toFixed(1) || 0}%
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Insights */}
+                    {complaintData.insights && complaintData.insights.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                          <Lightbulb className="w-5 h-5 text-yellow-500" />
+                          Insights & Rekomendasi
+                        </h3>
+                        <div className="grid gap-4">
+                          {complaintData.insights.map((insight, index) => (
+                            <div
+                              key={index}
+                              className={cn(
+                                "p-4 rounded-xl border-l-4",
+                                insight.type === 'danger' && "bg-red-50 border-red-500",
+                                insight.type === 'warning' && "bg-yellow-50 border-yellow-500",
+                                insight.type === 'info' && "bg-blue-50 border-blue-500",
+                                insight.type === 'success' && "bg-green-50 border-green-500"
+                              )}
+                            >
+                              <div className="flex items-start gap-3">
+                                <i className={`${insight.icon} text-lg mt-1`}></i>
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 mb-1">
+                                    {insight.title}
+                                  </h4>
+                                  <p className="text-gray-700">{insight.description}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Analysis Trend */}
+                    {complaintData.trend_analysis && (
+                      <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Activity className="w-5 h-5 text-blue-600" />
+                          <h4 className="font-semibold text-gray-900">Analisis Trend:</h4>
+                        </div>
+                        <p className="text-gray-700">
+                          Dari {complaintData.total_negative_reviews?.toLocaleString() || 0} review negatif, 
+                          terdeteksi {complaintData.total_complaints?.toLocaleString() || 0} keyword keluhan 
+                          dalam {complaintData.categories_found || 0} kategori. 
+                          Top 3 kategori menyumbang {
+                            complaintData.top_complaints?.slice(0, 3)
+                              .reduce((acc, [_, details]) => acc + (details.percentage || 0), 0)
+                              .toFixed(1) || 0
+                          }% dari total keluhan.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <i className="fas fa-smile text-2xl text-green-600"></i>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Excellent Performance!</h3>
+                    <p className="text-gray-600">
+                      Tidak ada keluhan signifikan terdeteksi untuk filter {currentFilterOption?.label}.
+                      Semua destinasi memiliki feedback yang positif.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Refresh Button */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.1 }}
+          transition={{ delay: 1.2 }}
           className="flex justify-center"
         >
           <button
