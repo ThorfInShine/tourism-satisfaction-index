@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   Target,
   Lightbulb,
-  TrendingDown
+  TrendingDown,
+  MapPin,
+  ChevronRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -32,10 +34,11 @@ import { apiService } from '../services/apiService';
 // Utils
 import { cn } from '../utils/cn';
 
-// Update the DestinationsList component's loadDestinations function
+// Updated DestinationsList component with new design
 const DestinationsList = ({ filter, data }) => {
   const [destinations, setDestinations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     loadDestinations();
@@ -52,7 +55,6 @@ const DestinationsList = ({ filter, data }) => {
         
         if (filter !== 'all') {
           filtered = filtered.filter(([name, dest]) => {
-            // Check multiple possible field names for visit category
             const visitCategory = (
               dest.visit_category || 
               dest.visit_level || 
@@ -61,23 +63,19 @@ const DestinationsList = ({ filter, data }) => {
               ''
             ).toLowerCase();
             
-            // Also check based on visit_count if category is not available
             const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
             
-            // If we have visit category, use it
             if (visitCategory) {
               if (filter === 'high') return visitCategory === 'tinggi' || visitCategory === 'high';
               if (filter === 'medium') return visitCategory === 'sedang' || visitCategory === 'medium';
               if (filter === 'low') return visitCategory === 'rendah' || visitCategory === 'low';
             } 
-            // Otherwise, determine based on visit count
             else if (visitCount > 0) {
               if (filter === 'high') return visitCount >= 1000;
               if (filter === 'medium') return visitCount >= 500 && visitCount < 1000;
               if (filter === 'low') return visitCount < 500;
             }
             
-            // If no data available, include in all filters
             return false;
           });
         }
@@ -90,12 +88,9 @@ const DestinationsList = ({ filter, data }) => {
         });
         
         setDestinations(filtered);
+        setShowAll(false); // Reset to show limited items when filter changes
         
-        // Log for debugging
         console.log(`Filter: ${filter}, Found ${filtered.length} destinations`);
-        if (filtered.length > 0) {
-          console.log('Sample destination:', filtered[0][1]);
-        }
       }
     } catch (error) {
       console.error('Failed to load destinations:', error);
@@ -106,17 +101,64 @@ const DestinationsList = ({ filter, data }) => {
 
   // Helper function to determine visit category for display
   const getVisitCategory = (dest) => {
-    // First check if category is already defined
     const category = dest.visit_category || dest.visit_level || dest.kunjungan_level || dest.kunjungan_category;
     if (category) {
       return category.toLowerCase();
     }
     
-    // Otherwise determine based on visit count
     const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
     if (visitCount >= 1000) return 'tinggi';
     if (visitCount >= 500) return 'sedang';
     return 'rendah';
+  };
+
+  // Component for the horizontal scroll list
+  const HorizontalScrollList = () => {
+    const topDestinations = destinations.slice(0, 10);
+    
+    if (topDestinations.length === 0) return null;
+    
+    return (
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 mb-6 overflow-hidden">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+          <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+            <MapPin className="w-4 h-4 text-blue-600" />
+            <span className="font-semibold text-sm text-gray-700">
+              Destinasi ({destinations.length}):
+            </span>
+          </div>
+          
+          {topDestinations.map(([name, dest], index) => {
+            const rating = dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0';
+            const visitCategory = getVisitCategory(dest);
+            
+            return (
+              <motion.div
+                key={name}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className={cn(
+                  "flex-shrink-0 px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
+                  "hover:scale-105"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">{name}</span>
+                  <span className="text-sm font-bold text-yellow-500">{rating}★</span>
+                </div>
+              </motion.div>
+            );
+          })}
+          
+          {destinations.length > 10 && (
+            <div className="flex-shrink-0 px-3 py-2">
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -145,139 +187,185 @@ const DestinationsList = ({ filter, data }) => {
     );
   }
 
-  return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Users className="w-6 h-6 text-white" />
-            <h2 className="text-xl font-bold text-white">
-              Daftar Destinasi Wisata
-            </h2>
-          </div>
-          <span className="bg-white/20 px-3 py-1 rounded-full text-sm text-white font-medium">
-            {destinations.length} Destinasi
-          </span>
-        </div>
-      </div>
+  // Determine how many items to show
+  const itemsToShow = showAll ? destinations.length : Math.min(5, destinations.length);
+  const displayedDestinations = destinations.slice(0, itemsToShow);
 
-      <div className="p-6">
-        <div className="grid gap-4">
-          {destinations.map(([name, dest], index) => {
-            const complaintLevel = dest.complaint_level?.toLowerCase();
-            const visitCategory = getVisitCategory(dest);
-            const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
-            
-            return (
-              <motion.div
-                key={name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-200"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow-sm">
-                      <span className="text-lg font-bold text-gray-600">
-                        {index + 1}
-                      </span>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-lg">
-                        {name}
-                      </h3>
+  return (
+    <>
+      {/* Horizontal Scroll List */}
+      <HorizontalScrollList />
+
+      {/* Main List */}
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Users className="w-6 h-6 text-white" />
+              <h2 className="text-xl font-bold text-white">
+                Daftar Destinasi Wisata
+              </h2>
+            </div>
+            <span className="bg-white/20 px-3 py-1 rounded-full text-sm text-white font-medium">
+              {destinations.length} Destinasi
+            </span>
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="space-y-4">
+            {displayedDestinations.map(([name, dest], index) => {
+              const complaintLevel = dest.complaint_level?.toLowerCase();
+              const visitCategory = getVisitCategory(dest);
+              const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
+              const rating = dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0';
+              const totalReviews = dest.total_reviews || 0;
+              const positivePercentage = dest.positive_percentage || 0;
+              const neutralPercentage = dest.neutral_percentage || 0;
+              const negativePercentage = dest.complaint_percentage || dest.negative_percentage || 0;
+              
+              return (
+                <motion.div
+                  key={name}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-200 overflow-hidden"
+                >
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-sm">
+                          <span className="text-lg font-bold text-blue-600">
+                            {index + 1}
+                          </span>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900 text-lg mb-2">
+                            {name}
+                          </h3>
+                          
+                          <div className="flex flex-wrap items-center gap-4">
+                            {/* Rating */}
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                              <span className="text-sm font-semibold text-gray-700">
+                                {rating}
+                              </span>
+                            </div>
+                            
+                            {/* Reviews */}
+                            <div className="flex items-center gap-1">
+                              <MessageSquare className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">
+                                {totalReviews.toLocaleString()} reviews
+                              </span>
+                            </div>
+                            
+                            {/* Visits */}
+                            <div className="flex items-center gap-1">
+                              <Users className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">
+                                {visitCount.toLocaleString()} kunjungan
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                       
-                      <div className="flex items-center gap-4 mt-1">
-                        {/* Rating */}
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          <span className="text-sm font-medium text-gray-700">
-                            {dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0'}
-                          </span>
-                        </div>
+                      <div className="flex flex-col items-end gap-2">
+                        {/* Visit Level Badge */}
+                        <span className={cn(
+                          "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
+                          visitCategory === 'tinggi' && "bg-green-100 text-green-700",
+                          visitCategory === 'sedang' && "bg-yellow-100 text-yellow-700",
+                          visitCategory === 'rendah' && "bg-red-100 text-red-700"
+                        )}>
+                          {visitCategory === 'tinggi' ? 'HIGH' : 
+                           visitCategory === 'sedang' ? 'MEDIUM' : 'LOW'}
+                        </span>
                         
-                        {/* Reviews Count */}
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="w-4 h-4 text-blue-500" />
-                          <span className="text-sm text-gray-600">
-                            {dest.total_reviews?.toLocaleString() || 0} reviews
-                          </span>
-                        </div>
-                        
-                        {/* Visit Count */}
-                        <div className="flex items-center gap-1">
-                          <Users className="w-4 h-4 text-green-500" />
-                          <span className="text-sm text-gray-600">
-                            {visitCount.toLocaleString()} kunjungan
-                          </span>
+                        {/* Complaint Percentage */}
+                        <div className="text-right">
+                          <div className={cn(
+                            "text-2xl font-bold",
+                            negativePercentage >= 40 && "text-red-500",
+                            negativePercentage >= 20 && negativePercentage < 40 && "text-orange-500",
+                            negativePercentage < 20 && "text-green-500"
+                          )}>
+                            {negativePercentage.toFixed(1)}%
+                          </div>
+                          <div className="text-xs text-gray-500 font-medium">Keluhan</div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    {/* Visit Category Badge */}
-                    <span className={cn(
-                      "px-3 py-1 rounded-full text-xs font-semibold uppercase",
-                      visitCategory === 'tinggi' && "bg-green-100 text-green-700",
-                      visitCategory === 'sedang' && "bg-yellow-100 text-yellow-700",
-                      visitCategory === 'rendah' && "bg-red-100 text-red-700"
-                    )}>
-                      {visitCategory || 'N/A'}
-                    </span>
                     
-                    {/* Complaint Level Indicator */}
-                    <div className="text-center">
-                      <div className={cn(
-                        "text-2xl font-bold",
-                        complaintLevel === 'tinggi' && "text-red-500",
-                        complaintLevel === 'sedang' && "text-yellow-500",
-                        complaintLevel === 'rendah' && "text-green-500"
-                      )}>
-                        {dest.complaint_percentage?.toFixed(1) || '0.0'}%
+                    {/* Sentiment Progress Bar */}
+                    <div className="mt-4">
+                      <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
+                        <motion.div 
+                          className="bg-gradient-to-r from-green-400 to-green-500"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${positivePercentage}%` }}
+                          transition={{ duration: 0.8, delay: index * 0.1 }}
+                        />
+                        <motion.div 
+                          className="bg-gradient-to-r from-yellow-400 to-yellow-500"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${neutralPercentage}%` }}
+                          transition={{ duration: 0.8, delay: index * 0.1 + 0.1 }}
+                        />
+                        <motion.div 
+                          className="bg-gradient-to-r from-red-400 to-red-500"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${negativePercentage}%` }}
+                          transition={{ duration: 0.8, delay: index * 0.1 + 0.2 }}
+                        />
                       </div>
-                      <div className="text-xs text-gray-500">Keluhan</div>
+                      
+                      <div className="flex justify-between mt-2">
+                        <span className="text-xs text-green-600 font-medium">
+                          Positif: {positivePercentage.toFixed(1)}%
+                        </span>
+                        <span className="text-xs text-yellow-600 font-medium">
+                          Netral: {neutralPercentage.toFixed(1)}%
+                        </span>
+                        <span className="text-xs text-red-600 font-medium">
+                          Negatif: {negativePercentage.toFixed(1)}%
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                {/* Progress Bar for Sentiment Distribution */}
-                <div className="mt-3">
-                  <div className="flex h-2 rounded-full overflow-hidden bg-gray-200">
-                    <div 
-                      className="bg-green-500 transition-all duration-500"
-                      style={{ width: `${dest.positive_percentage || 0}%` }}
-                    />
-                    <div 
-                      className="bg-yellow-500 transition-all duration-500"
-                      style={{ width: `${dest.neutral_percentage || 0}%` }}
-                    />
-                    <div 
-                      className="bg-red-500 transition-all duration-500"
-                      style={{ width: `${dest.complaint_percentage || dest.negative_percentage || 0}%` }}
-                    />
-                  </div>
-                  
-                  <div className="flex justify-between mt-1">
-                    <span className="text-xs text-green-600">
-                      Positif: {dest.positive_percentage?.toFixed(1) || 0}%
-                    </span>
-                    <span className="text-xs text-yellow-600">
-                      Netral: {dest.neutral_percentage?.toFixed(1) || 0}%
-                    </span>
-                    <span className="text-xs text-red-600">
-                      Negatif: {(dest.complaint_percentage || dest.negative_percentage || 0).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Show More/Less Button */}
+          {destinations.length > 5 && (
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => setShowAll(!showAll)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+              >
+                {showAll ? (
+                  <>
+                    <span>Tampilkan Lebih Sedikit</span>
+                    <ChevronDown className="w-4 h-4 rotate-180" />
+                  </>
+                ) : (
+                  <>
+                    <span>Tampilkan Semua ({destinations.length})</span>
+                    <ChevronDown className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -493,7 +581,7 @@ const Dashboard = () => {
           </motion.div>
         </motion.div>
 
-        {/* Destinations List Section - NEW */}
+        {/* Destinations List Section - NEW DESIGN */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -666,7 +754,7 @@ const Dashboard = () => {
           </motion.div>
         )}
 
-        {/* Complaint Analysis Section - MOVED FROM ANALYSIS TAB */}
+        {/* Complaint Analysis Section */}
         {complaintData && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
