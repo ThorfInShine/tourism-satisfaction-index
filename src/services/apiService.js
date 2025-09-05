@@ -2,11 +2,25 @@ import axios from 'axios';
 
 class ApiService {
   constructor() {
-    // Determine environment
-    this.isDevelopment = window.location.hostname === 'localhost';
+    // Determine environment based on hostname
+    this.isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1';
     
-    // Use different base URL for development vs production
-   const baseURL = 'https://apibatas.bpskotabatu.com/api';
+    // Check if deployed to Vercel
+    this.isVercel = window.location.hostname.includes('vercel.app');
+    
+    // IMPORTANT: Always use production API when deployed
+    let baseURL;
+    if (this.isDevelopment) {
+      baseURL = 'http://localhost:5000/api';
+    } else {
+      // For Vercel or any production deployment
+      baseURL = 'https://apibatas.bpskotabatu.com/api';
+    }
+    
+    console.log(`🌍 Environment: ${this.isDevelopment ? 'Development' : 'Production'}`);
+    console.log(`📡 API URL: ${baseURL}`);
+    console.log(`🌐 Current Host: ${window.location.hostname}`);
     
     this.api = axios.create({
       baseURL: baseURL,
@@ -17,7 +31,7 @@ class ApiService {
         'X-Requested-With': 'XMLHttpRequest'
       },
       // Enable credentials for production to handle sessions
-      withCredentials: true // Only use credentials in production
+      withCredentials: false // Only use credentials in production
     });
 
     // Request interceptor
