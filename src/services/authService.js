@@ -1,10 +1,10 @@
 // FILE: src/services/authService.js
 class AuthService {
-  constructor() {
-    this.currentUser = null;
-    // Use the Flask backend URL
-    this.baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-  }
+constructor() {
+  this.currentUser = null;
+  // Gunakan URL API production
+  this.baseURL = 'http://apibatas.bpskotabatu.com/api';
+}
 
   async login(email, password) {
     try {
