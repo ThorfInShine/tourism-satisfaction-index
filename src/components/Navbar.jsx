@@ -72,7 +72,7 @@ const Navbar = ({ user, isAuthenticated, onLogout }) => {
               "font-bold text-lg transition-colors duration-300",
               shouldBeTransparent ? "text-white drop-shadow-lg" : "text-gray-900"
             )}>
-              BATAS - Batu Tourism Analysis SystemAS
+              BATAS - Batu Tourism Analysis System
             </span>
           </Link>
 
