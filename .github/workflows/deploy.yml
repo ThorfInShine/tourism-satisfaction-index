@@ -42,7 +42,7 @@ jobs:
         cache: 'npm'
         
     - name: 📥 Cache Dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.npm
@@ -90,9 +90,9 @@ jobs:
         find build/ -name "*.html" -o -name "*.js" -o -name "*.css" | head -10
         
     - name: 📤 Upload Build Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: build-files-${{ github.sha }}
+        name: build-files-${{ github.run_id }}
         path: build/
         retention-days: 7
         if-no-files-found: error
@@ -109,9 +109,9 @@ jobs:
     
     steps:
     - name: 📥 Download Build Artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
-        name: build-files-${{ github.sha }}
+        name: build-files-${{ github.run_id }}
         path: build/
         
     - name: 🗜️ Create Deployment Package
@@ -144,7 +144,6 @@ jobs:
         source: "deploy.tar.gz"
         target: "/tmp/"
         timeout: 300s
-        use_insecure_cipher: false
         
     - name: 🔄 Server Deployment Process
       uses: appleboy/ssh-action@v0.1.8
@@ -182,10 +181,6 @@ jobs:
           # Create deployment directory
           sudo mkdir -p $DEPLOY_DIR
           
-          # Stop nginx temporarily for safer deployment
-          echo "⏸️ Stopping nginx temporarily..."
-          sudo systemctl stop nginx
-          
           # Clear current deployment (keep .git if exists)
           echo "🧹 Clearing current deployment..."
           sudo find $DEPLOY_DIR -mindepth 1 -not -path "*/.git*" -delete 2>/dev/null || true
@@ -195,7 +190,6 @@ jobs:
           cd /tmp
           if [ ! -f "deploy.tar.gz" ]; then
             echo "❌ Deployment package not found!"
-            sudo systemctl start nginx
             exit 1
           fi
           
@@ -217,7 +211,6 @@ jobs:
           echo "🔍 Verifying deployment..."
           if [ ! -f "$DEPLOY_DIR/index.html" ]; then
             echo "❌ Deployment verification failed - index.html not found"
-            sudo systemctl start nginx
             exit 1
           fi
           
@@ -236,18 +229,17 @@ jobs:
               sudo chown -R www-data:www-data $DEPLOY_DIR
             fi
             
-            sudo systemctl start nginx
             exit 1
           fi
           
-          # Start nginx
-          echo "▶️ Starting nginx..."
-          sudo systemctl start nginx
+          # Reload nginx
+          echo "🔄 Reloading nginx..."
+          sudo systemctl reload nginx
           
           # Wait a moment and check nginx status
           sleep 2
           if ! sudo systemctl is-active --quiet nginx; then
-            echo "❌ Nginx failed to start"
+            echo "❌ Nginx is not running properly"
             exit 1
           fi
           
@@ -323,7 +315,7 @@ jobs:
         
         echo "🎉 Post-deployment testing completed!"
 
-  # Job untuk notification (optional)
+  # Job untuk notification
   notify:
     needs: [deploy, post-deploy-test]
     runs-on: ubuntu-latest
