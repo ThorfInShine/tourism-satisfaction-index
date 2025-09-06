@@ -129,54 +129,55 @@ const HomePage = () => {
 
 // Hero Section Component - DESKTOP LAYOUT PRESERVED
 const HeroSection = ({ tourismImage, scrollToContent, isMobile }) => {
-  // Mobile Layout
+  // Mobile Layout - FIXED
   if (isMobile) {
     return (
-      <section className="min-h-screen relative overflow-hidden flex items-center py-16 px-4">
-        <div className="relative z-10 max-w-7xl mx-auto w-full">
-          <div className="flex flex-col items-center text-center space-y-6">
+      <section className="min-h-screen relative overflow-hidden flex flex-col justify-center px-4 py-20">
+        <div className="relative z-10 w-full">
+          <div className="flex flex-col items-center text-center space-y-5">
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-md rounded-full text-white text-sm"
+              className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-md rounded-full text-white text-xs"
             >
-              <Sparkles className="w-4 h-4 mr-2" />
+              <Sparkles className="w-3 h-3 mr-2" />
               <span>Powered by AI & ML</span>
             </motion.div>
 
-            {/* Title */}
+            {/* Title - FIXED */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
+              className="w-full px-2"
             >
-              <h1 className="text-4xl font-extrabold text-white leading-tight mb-3">
+              <h1 className="text-3xl font-extrabold text-white leading-tight">
                 Data Bicara:
               </h1>
-              <p className="text-xl text-white/90 font-medium">
+              <p className="text-lg text-white/90 font-medium mt-2 px-4">
                 Bagaimana Tingkat Kepuasan di Kota Batu?
               </p>
             </motion.div>
 
-            {/* Description */}
+            {/* Description - IMPROVED */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="text-white/90 text-base leading-relaxed max-w-md"
+              className="text-white/90 text-sm leading-relaxed px-6 max-w-sm"
             >
               Platform canggih untuk menganalisis kepuasan wisatawan menggunakan 
               Machine Learning dan Natural Language Processing.
             </motion.p>
 
-            {/* Image */}
+            {/* Image - OPTIMIZED SIZE */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, duration: 0.6 }}
-              className="relative w-full max-w-sm"
+              className="relative w-full max-w-xs px-4"
             >
               <motion.img 
                 src={tourismImage}
@@ -188,16 +189,16 @@ const HeroSection = ({ tourismImage, scrollToContent, isMobile }) => {
               />
             </motion.div>
 
-            {/* CTA Buttons */}
+            {/* CTA Buttons - IMPROVED SPACING */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.6 }}
-              className="flex flex-col w-full max-w-sm space-y-3"
+              className="flex flex-col w-full px-6 space-y-3 pt-4"
             >
               <Link
                 to="/dashboard"
-                className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-orange-500 to-yellow-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+                className="w-full flex items-center justify-center px-6 py-3.5 bg-gradient-to-r from-orange-500 to-yellow-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
               >
                 <BarChart3 className="w-5 h-5 mr-2" />
                 Mulai Analisis
@@ -206,7 +207,7 @@ const HeroSection = ({ tourismImage, scrollToContent, isMobile }) => {
               
               <button
                 onClick={scrollToContent}
-                className="w-full flex items-center justify-center px-6 py-4 bg-white/20 backdrop-blur-md text-white font-medium rounded-2xl border border-white/30 hover:bg-white/30 transition-all duration-300"
+                className="w-full flex items-center justify-center px-6 py-3.5 bg-white/20 backdrop-blur-md text-white font-medium rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300"
               >
                 Lihat Fitur Lengkap
                 <ChevronDown className="w-5 h-5 ml-2" />
@@ -215,7 +216,26 @@ const HeroSection = ({ tourismImage, scrollToContent, isMobile }) => {
           </div>
         </div>
 
-        <ScrollIndicator onClick={scrollToContent} />
+        {/* Scroll Indicator - Mobile */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.5, duration: 0.8 }}
+          className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
+          onClick={scrollToContent}
+        >
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="w-5 h-8 border-2 border-white/50 rounded-full flex justify-center"
+          >
+            <motion.div
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="w-1 h-2 bg-white/70 rounded-full mt-1.5"
+            />
+          </motion.div>
+        </motion.div>
       </section>
     );
   }
@@ -344,50 +364,50 @@ const ScrollIndicator = ({ onClick }) => (
   </motion.div>
 );
 
-// Features Section Component
+// Features Section Component - MOBILE OPTIMIZED
 const FeaturesSection = ({ features, showContent, isMobile }) => {
-  // Mobile Layout
+  // Mobile Layout - IMPROVED
   if (isMobile) {
     return (
       <motion.section 
-        className="py-16 relative z-2"
+        className="py-12 relative z-2"
         initial={{ opacity: 0, y: 50 }}
         animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="px-4">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
             transition={{ duration: 0.8 }}
-            className="text-center mb-10"
+            className="text-center mb-8"
           >
-            <h2 className="text-3xl font-bold text-white mb-4">
+            <h2 className="text-2xl font-bold text-white mb-3">
               Fitur Unggulan
             </h2>
-            <p className="text-white/80 text-base max-w-2xl mx-auto">
+            <p className="text-white/80 text-sm px-4">
               Teknologi terdepan untuk analisis kepuasan wisatawan
             </p>
           </motion.div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {features.map((feature, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, x: -50 }}
-                animate={showContent ? { opacity: 1, x: 0 } : { opacity: 0, x: -50 }}
+                initial={{ opacity: 0, x: -30 }}
+                animate={showContent ? { opacity: 1, x: 0 } : { opacity: 0, x: -30 }}
                 transition={{ duration: 0.5, delay: showContent ? index * 0.1 : 0 }}
-                className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-xl"
+                className="bg-white/95 backdrop-blur-md rounded-xl p-5 shadow-lg"
               >
-                <div className="flex items-start space-x-4">
-                  <div className={`w-14 h-14 bg-gradient-to-r ${feature.gradient} rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-lg`}>
-                    <feature.icon className="w-7 h-7" />
+                <div className="flex items-start space-x-3">
+                  <div className={`w-12 h-12 bg-gradient-to-r ${feature.gradient} rounded-lg flex items-center justify-center flex-shrink-0 text-white shadow-md`}>
+                    <feature.icon className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                    <h3 className="text-base font-bold text-gray-900 mb-1">
                       {feature.title}
                     </h3>
-                    <p className="text-sm text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600 leading-relaxed">
                       {feature.description}
                     </p>
                   </div>
@@ -499,9 +519,9 @@ const AnimatedNumber = ({ value, suffix = '', showContent }) => {
   return <span>{formatNumber(displayValue)}{suffix}</span>;
 };
 
-// Stats Section Component
+// Stats Section Component - MOBILE OPTIMIZED
 const StatsSection = ({ stats, loading, showContent, statsImage, isMobile }) => {
-  // Mobile Layout
+  // Mobile Layout - IMPROVED
   if (isMobile) {
     return (
       <motion.section 
@@ -510,14 +530,14 @@ const StatsSection = ({ stats, loading, showContent, statsImage, isMobile }) => 
         animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
         transition={{ duration: 0.8, delay: 0.3 }}
       >
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="px-4">
           <motion.div
-            className="bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/10"
+            className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/10"
             initial={{ opacity: 0, y: 50 }}
             animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* Stats Image */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -528,7 +548,7 @@ const StatsSection = ({ stats, loading, showContent, statsImage, isMobile }) => 
                 <motion.img 
                   src={statsImage}
                   alt="Tourist Stats" 
-                  className="w-48 h-auto"
+                  className="w-40 h-auto"
                   animate={{ y: [0, -8, 0] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                   style={{ filter: 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.1))' }}
@@ -536,10 +556,10 @@ const StatsSection = ({ stats, loading, showContent, statsImage, isMobile }) => 
               </motion.div>
 
               {/* Stats Numbers */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4">
                 {loading ? (
-                  <div className="col-span-2 flex justify-center py-8">
-                    <LoadingSpinner size="large" />
+                  <div className="col-span-2 flex justify-center py-6">
+                    <LoadingSpinner size="medium" />
                   </div>
                 ) : (
                   <>
@@ -547,12 +567,12 @@ const StatsSection = ({ stats, loading, showContent, statsImage, isMobile }) => 
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={showContent ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                       transition={{ duration: 0.6 }}
-                      className="text-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4"
+                      className="text-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4"
                     >
-                      <div className="text-3xl font-extrabold text-blue-600 mb-1">
+                      <div className="text-2xl font-extrabold text-blue-600">
                         <AnimatedNumber value={stats?.total_reviews || 22000} showContent={showContent} />
                       </div>
-                      <div className="text-sm font-semibold text-gray-700">Review</div>
+                      <div className="text-xs font-semibold text-gray-700 mt-1">Review</div>
                       <div className="text-xs text-gray-500">Diproses</div>
                     </motion.div>
 
@@ -560,12 +580,12 @@ const StatsSection = ({ stats, loading, showContent, statsImage, isMobile }) => 
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={showContent ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
                       transition={{ duration: 0.6, delay: 0.1 }}
-                      className="text-center bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4"
+                      className="text-center bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4"
                     >
-                      <div className="text-3xl font-extrabold text-green-600 mb-1">
+                      <div className="text-2xl font-extrabold text-green-600">
                         <AnimatedNumber value={stats?.total_destinations || 30} showContent={showContent} />
                       </div>
-                      <div className="text-sm font-semibold text-gray-700">Destinasi</div>
+                      <div className="text-xs font-semibold text-gray-700 mt-1">Destinasi</div>
                       <div className="text-xs text-gray-500">Wisata</div>
                     </motion.div>
                   </>
@@ -670,16 +690,16 @@ const StatsIllustration = ({ statsImage, showContent }) => (
   </motion.div>
 );
 
-// Footer Component
+// Footer Component - MOBILE OPTIMIZED
 const Footer = ({ showContent }) => (
   <motion.footer 
-    className="bg-black/20 backdrop-blur-md py-8 text-white/80 text-center mt-16"
+    className="bg-black/20 backdrop-blur-md py-6 sm:py-8 text-white/80 text-center mt-8 sm:mt-16"
     initial={{ opacity: 0 }}
     animate={showContent ? { opacity: 1 } : { opacity: 0 }}
     transition={{ duration: 0.8, delay: 0.5 }}
   >
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="text-sm sm:text-lg">
+      <div className="text-xs sm:text-lg">
         © 2025 Analisis Kepuasan Wisatawan Kota Batu
       </div>
     </div>
