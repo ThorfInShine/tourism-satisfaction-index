@@ -1,0 +1,345 @@
+name: Deploy Batu Tourism Analytics
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.gitignore'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+env:
+  NODE_VERSION: '18'
+  BUILD_PATH: 'build'
+
+jobs:
+  # Job untuk build aplikasi React
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🚀 Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        
+    - name: 📥 Cache Dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.npm
+          node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+          
+    - name: 🔧 Install Dependencies
+      run: |
+        echo "Installing dependencies..."
+        npm ci --prefer-offline --no-audit --progress=false
+        echo "Dependencies installed successfully"
+        
+    - name: 🏗️ Build React Application
+      run: |
+        echo "Building React application..."
+        echo "Build started at: $(date)"
+        npm run build
+        echo "Build completed at: $(date)"
+        
+        # Verify build output
+        if [ ! -d "build" ] || [ ! -f "build/index.html" ]; then
+          echo "❌ Build failed - build directory or index.html not found"
+          exit 1
+        fi
+        
+        echo "✅ Build verification passed"
+        ls -la build/
+      env:
+        CI: false
+        REACT_APP_API_URL: https://apibatas.bpskotabatu.com/api
+        REACT_APP_ENV: production
+        REACT_APP_DOMAIN: batas.bpskotabatu.com
+        GENERATE_SOURCEMAP: false
+        
+    - name: 📊 Build Analysis
+      run: |
+        echo "=== Build Analysis ==="
+        echo "Build size:"
+        du -sh build/
+        echo "Number of files:"
+        find build/ -type f | wc -l
+        echo "Main files:"
+        find build/ -name "*.html" -o -name "*.js" -o -name "*.css" | head -10
+        
+    - name: 📤 Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-files-${{ github.sha }}
+        path: build/
+        retention-days: 7
+        if-no-files-found: error
+
+  # Job untuk deploy ke server
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: production
+      url: https://batas.bpskotabatu.com
+    
+    steps:
+    - name: 📥 Download Build Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: build-files-${{ github.sha }}
+        path: build/
+        
+    - name: 🗜️ Create Deployment Package
+      run: |
+        echo "Creating deployment package..."
+        cd build
+        
+        # Create tar.gz with timestamp
+        TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+        tar -czf ../batu-tourism-${TIMESTAMP}.tar.gz *
+        cd ..
+        
+        # Create symlink for consistent naming
+        ln -sf batu-tourism-${TIMESTAMP}.tar.gz deploy.tar.gz
+        
+        echo "Package created:"
+        ls -la *.tar.gz
+        
+        # Verify package contents
+        echo "Package contents preview:"
+        tar -tzf deploy.tar.gz | head -20
+        
+    - name: 🚀 Deploy to Production Server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: 22
+        source: "deploy.tar.gz"
+        target: "/tmp/"
+        timeout: 300s
+        use_insecure_cipher: false
+        
+    - name: 🔄 Server Deployment Process
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: 22
+        timeout: 600s
+        command_timeout: 300s
+        script: |
+          set -e
+          
+          echo "🚀 Starting deployment process..."
+          echo "Deployment started at: $(date)"
+          
+          # Variables
+          DEPLOY_DIR="/var/www/html/batas.bpskotabatu.com"
+          BACKUP_DIR="/var/backups/batas.bpskotabatu.com"
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          # Create backup directory if not exists
+          sudo mkdir -p $BACKUP_DIR
+          
+          # Create backup of current deployment
+          echo "📦 Creating backup..."
+          if [ -d "$DEPLOY_DIR" ] && [ "$(ls -A $DEPLOY_DIR 2>/dev/null)" ]; then
+            sudo tar -czf $BACKUP_DIR/backup_${TIMESTAMP}.tar.gz -C $DEPLOY_DIR . 2>/dev/null || true
+            echo "✅ Backup created: backup_${TIMESTAMP}.tar.gz"
+            
+            # Keep only last 5 backups
+            sudo find $BACKUP_DIR -name "backup_*.tar.gz" -type f -printf '%T@ %p\n' | sort -n | head -n -5 | cut -d' ' -f2- | sudo xargs rm -f
+          fi
+          
+          # Create deployment directory
+          sudo mkdir -p $DEPLOY_DIR
+          
+          # Stop nginx temporarily for safer deployment
+          echo "⏸️ Stopping nginx temporarily..."
+          sudo systemctl stop nginx
+          
+          # Clear current deployment (keep .git if exists)
+          echo "🧹 Clearing current deployment..."
+          sudo find $DEPLOY_DIR -mindepth 1 -not -path "*/.git*" -delete 2>/dev/null || true
+          
+          # Extract new deployment
+          echo "📦 Extracting new deployment..."
+          cd /tmp
+          if [ ! -f "deploy.tar.gz" ]; then
+            echo "❌ Deployment package not found!"
+            sudo systemctl start nginx
+            exit 1
+          fi
+          
+          sudo tar -xzf deploy.tar.gz -C $DEPLOY_DIR/
+          echo "✅ Files extracted successfully"
+          
+          # Set proper ownership and permissions
+          echo "🔐 Setting permissions..."
+          sudo chown -R www-data:www-data $DEPLOY_DIR
+          sudo chmod -R 755 $DEPLOY_DIR
+          sudo find $DEPLOY_DIR -type f -exec chmod 644 {} \;
+          
+          # Special permissions for specific files
+          sudo chmod 644 $DEPLOY_DIR/index.html 2>/dev/null || true
+          sudo chmod 644 $DEPLOY_DIR/manifest.json 2>/dev/null || true
+          sudo chmod 644 $DEPLOY_DIR/robots.txt 2>/dev/null || true
+          
+          # Verify deployment
+          echo "🔍 Verifying deployment..."
+          if [ ! -f "$DEPLOY_DIR/index.html" ]; then
+            echo "❌ Deployment verification failed - index.html not found"
+            sudo systemctl start nginx
+            exit 1
+          fi
+          
+          # Test nginx configuration
+          echo "🔧 Testing nginx configuration..."
+          sudo nginx -t
+          if [ $? -ne 0 ]; then
+            echo "❌ Nginx configuration test failed"
+            
+            # Restore from backup if available
+            LATEST_BACKUP=$(sudo find $BACKUP_DIR -name "backup_*.tar.gz" -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2-)
+            if [ -n "$LATEST_BACKUP" ]; then
+              echo "🔄 Restoring from backup..."
+              sudo rm -rf $DEPLOY_DIR/*
+              sudo tar -xzf $LATEST_BACKUP -C $DEPLOY_DIR/
+              sudo chown -R www-data:www-data $DEPLOY_DIR
+            fi
+            
+            sudo systemctl start nginx
+            exit 1
+          fi
+          
+          # Start nginx
+          echo "▶️ Starting nginx..."
+          sudo systemctl start nginx
+          
+          # Wait a moment and check nginx status
+          sleep 2
+          if ! sudo systemctl is-active --quiet nginx; then
+            echo "❌ Nginx failed to start"
+            exit 1
+          fi
+          
+          # Cleanup temporary files
+          echo "🧹 Cleaning up..."
+          rm -f /tmp/deploy.tar.gz
+          
+          # Final verification
+          echo "🔍 Final verification..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost -H "Host: batas.bpskotabatu.com" || echo "000")
+          
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ Deployment completed successfully!"
+            echo "🌐 Website is available at: https://batas.bpskotabatu.com"
+            echo "📊 Deployment stats:"
+            echo "   - Files deployed: $(find $DEPLOY_DIR -type f | wc -l)"
+            echo "   - Total size: $(du -sh $DEPLOY_DIR | cut -f1)"
+            echo "   - Deployment time: $(date)"
+          else
+            echo "⚠️ Deployment completed but website returned HTTP $HTTP_STATUS"
+            echo "Check nginx logs: sudo tail -f /var/log/nginx/error.log"
+          fi
+
+  # Job untuk testing setelah deployment
+  post-deploy-test:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: 🧪 Post-Deployment Testing
+      run: |
+        echo "🧪 Running post-deployment tests..."
+        
+        # Wait for deployment to be fully ready
+        sleep 10
+        
+        # Test HTTP response
+        echo "Testing HTTP response..."
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://batas.bpskotabatu.com)
+        echo "HTTP Status: $HTTP_STATUS"
+        
+        if [ "$HTTP_STATUS" != "200" ]; then
+          echo "❌ HTTP test failed with status: $HTTP_STATUS"
+          exit 1
+        fi
+        
+        # Test HTTPS response (if SSL is configured)
+        echo "Testing HTTPS response..."
+        HTTPS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://batas.bpskotabatu.com || echo "000")
+        echo "HTTPS Status: $HTTPS_STATUS"
+        
+        # Test content
+        echo "Testing page content..."
+        CONTENT=$(curl -s http://batas.bpskotabatu.com)
+        
+        if echo "$CONTENT" | grep -q "tourism\|analytics\|batu" -i; then
+          echo "✅ Content verification passed"
+        else
+          echo "⚠️ Content verification warning - expected keywords not found"
+        fi
+        
+        # Test API connectivity (optional)
+        echo "Testing API connectivity..."
+        API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://apibatas.bpskotabatu.com/api/stats || echo "000")
+        echo "API Status: $API_STATUS"
+        
+        if [ "$API_STATUS" = "200" ]; then
+          echo "✅ API connectivity test passed"
+        else
+          echo "⚠️ API connectivity test failed with status: $API_STATUS"
+        fi
+        
+        echo "🎉 Post-deployment testing completed!"
+
+  # Job untuk notification (optional)
+  notify:
+    needs: [deploy, post-deploy-test]
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: 📢 Deployment Notification
+      run: |
+        if [ "${{ needs.deploy.result }}" = "success" ] && [ "${{ needs.post-deploy-test.result }}" = "success" ]; then
+          echo "✅ DEPLOYMENT SUCCESS"
+          echo "🌐 Website: https://batas.bpskotabatu.com"
+          echo "📅 Deployed at: $(date)"
+          echo "🔗 Commit: ${{ github.sha }}"
+          echo "👤 Author: ${{ github.actor }}"
+        else
+          echo "❌ DEPLOYMENT FAILED"
+          echo "Deploy status: ${{ needs.deploy.result }}"
+          echo "Test status: ${{ needs.post-deploy-test.result }}"
+        fi
