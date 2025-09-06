@@ -3,7 +3,7 @@ class AuthService {
 constructor() {
   this.currentUser = null;
   // Gunakan URL API production
-  this.baseURL = 'https://apibatas.bpskotabatu.com/api';
+  this.baseURL = 'https://apibatas.bpskotabatu.com';
 }
 
   async login(email, password) {
