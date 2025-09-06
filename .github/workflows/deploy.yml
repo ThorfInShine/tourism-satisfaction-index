@@ -73,7 +73,6 @@ jobs:
         port: 22
         source: "build/*"
         target: "/tmp/batu-tourism-deploy/"
-        strip_components: 1
         timeout: 300s
         overwrite: true
         rm: true
@@ -112,30 +111,6 @@ jobs:
           echo "📁 Temporary files found:"
           ls -la $TEMP_DIR/
           
-          # Check for index.html in temp directory
-          if [ ! -f "$TEMP_DIR/index.html" ]; then
-            echo "❌ index.html not found in temp directory"
-            echo "Checking for nested build directory..."
-            if [ -d "$TEMP_DIR/build" ]; then
-              echo "Found nested build directory, moving files up..."
-              mv $TEMP_DIR/build/* $TEMP_DIR/ 2>/dev/null || true
-              rmdir $TEMP_DIR/build 2>/dev/null || true
-              echo "Files after moving:"
-              ls -la $TEMP_DIR/
-            else
-              echo "❌ No build directory found either"
-              exit 1
-            fi
-          fi
-          
-          # Final check for index.html
-          if [ ! -f "$TEMP_DIR/index.html" ]; then
-            echo "❌ index.html still not found after restructuring"
-            exit 1
-          fi
-          
-          echo "✅ index.html found in temp directory"
-          
           # Backup current deployment
           if [ -d "$DEPLOY_DIR" ] && [ "$(ls -A $DEPLOY_DIR 2>/dev/null)" ]; then
             echo "📦 Creating backup..."
@@ -146,9 +121,9 @@ jobs:
             sudo find $BACKUP_DIR -name "backup_*.tar.gz" -type f -printf '%T@ %p\n' | sort -n | head -n -5 | cut -d' ' -f2- | sudo xargs rm -f 2>/dev/null || true
           fi
           
-          # Clear deployment directory (but keep .git if exists)
+          # Clear deployment directory
           echo "🧹 Clearing deployment directory..."
-          sudo find $DEPLOY_DIR -mindepth 1 -not -path "*/.git*" -delete 2>/dev/null || true
+          sudo rm -rf $DEPLOY_DIR/*
           
           # Move files from temp to deployment directory
           echo "📦 Moving files to deployment directory..."
