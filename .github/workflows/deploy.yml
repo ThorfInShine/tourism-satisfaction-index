@@ -73,7 +73,6 @@ jobs:
         port: 22
         source: "build/*"
         target: "/tmp/batu-tourism-deploy/"
-        strip_components: 1
         timeout: 300s
         overwrite: true
         rm: true
@@ -112,32 +111,6 @@ jobs:
           echo "📁 Temporary files found:"
           ls -la $TEMP_DIR/
           
-          # Handle nested build directory issue
-          if [ -d "$TEMP_DIR/build" ] && [ ! -f "$TEMP_DIR/index.html" ]; then
-            echo "🔧 Fixing nested build directory..."
-            # Move files from nested build to temp root
-            if [ -f "$TEMP_DIR/build/index.html" ]; then
-              sudo mv $TEMP_DIR/build/* $TEMP_DIR/ 2>/dev/null || true
-              sudo rmdir $TEMP_DIR/build 2>/dev/null || true
-              echo "✅ Files moved from nested build directory"
-              echo "Files after restructuring:"
-              ls -la $TEMP_DIR/
-            else
-              echo "❌ No index.html found in nested build directory either"
-              exit 1
-            fi
-          fi
-          
-          # Final check for index.html
-          if [ ! -f "$TEMP_DIR/index.html" ]; then
-            echo "❌ index.html still not found in temp directory"
-            echo "Current temp directory contents:"
-            find $TEMP_DIR -name "*.html" -o -name "index.*" || echo "No HTML or index files found"
-            exit 1
-          fi
-          
-          echo "✅ index.html confirmed in temp directory"
-          
           # Backup current deployment
           if [ -d "$DEPLOY_DIR" ] && [ "$(ls -A $DEPLOY_DIR 2>/dev/null)" ]; then
             echo "📦 Creating backup..."
@@ -148,21 +121,19 @@ jobs:
             sudo find $BACKUP_DIR -name "backup_*.tar.gz" -type f -printf '%T@ %p\n' | sort -n | head -n -5 | cut -d' ' -f2- | sudo xargs rm -f 2>/dev/null || true
           fi
           
-          # Clear deployment directory (preserve .git)
+          # Clear deployment directory
           echo "🧹 Clearing deployment directory..."
-          sudo find $DEPLOY_DIR -mindepth 1 -not -path "*/.git*" -delete 2>/dev/null || true
+          sudo rm -rf $DEPLOY_DIR/*
           
           # Move files from temp to deployment directory
           echo "📦 Moving files to deployment directory..."
-          sudo cp -r $TEMP_DIR/* $DEPLOY_DIR/ 2>/dev/null || true
+          sudo cp -r $TEMP_DIR/* $DEPLOY_DIR/
           
-          # Double-check critical files after move
+          # Verify critical files
           if [ ! -f "$DEPLOY_DIR/index.html" ]; then
-            echo "❌ Critical file missing after move: index.html"
+            echo "❌ Critical file missing: index.html"
             echo "Files in deployment directory:"
             ls -la $DEPLOY_DIR/
-            echo "Files in temp directory:"
-            ls -la $TEMP_DIR/
             exit 1
           fi
           
