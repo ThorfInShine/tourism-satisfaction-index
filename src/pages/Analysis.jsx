@@ -682,24 +682,112 @@ const Analysis = () => {
     loadAnalysisData();
   }, []);
 
-  const loadAnalysisData = async () => {
-    try {
-      setLoading(true);
-      const [analysisData, wisataData] = await Promise.all([
-        apiService.getAnalysisData(),
-        apiService.getAllWisataAnalysis()
-      ]);
-      
-      setData(analysisData);
-      setWisataAnalysis(wisataData);
-      
-    } catch (error) {
-      console.error('Failed to load analysis data:', error);
-      toast.error('Gagal memuat data analisis');
-    } finally {
-      setLoading(false);
+const loadAnalysisData = async () => {
+  try {
+    setLoading(true);
+    
+    // Fetch kunjungan data first
+    const kunjunganResponse = await apiService.getKunjunganData();
+    let kunjunganMap = {};
+    
+    if (kunjunganResponse && kunjunganResponse.success && kunjunganResponse.kunjungan_data) {
+      kunjunganMap = kunjunganResponse.kunjungan_data;
+      console.log('Kunjungan data loaded:', kunjunganMap);
     }
-  };
+    
+    // Then fetch analysis data
+    const [analysisData, wisataData] = await Promise.all([
+      apiService.getAnalysisData(),
+      apiService.getAllWisataAnalysis()
+    ]);
+    
+    // Merge kunjungan data into wisata analysis
+    if (wisataData && wisataData.destinations && kunjunganMap) {
+      Object.keys(wisataData.destinations).forEach(name => {
+        // Try to find matching kunjungan data
+        let visitCount = 0;
+        
+        // Direct match
+        if (kunjunganMap[name]) {
+          visitCount = kunjunganMap[name];
+        } else {
+          // Try to find partial matches
+          Object.entries(kunjunganMap).forEach(([key, value]) => {
+            // Normalize names for comparison
+            const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const normalizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            if (normalizedKey.includes(normalizedName) || normalizedName.includes(normalizedKey)) {
+              visitCount = value;
+            }
+            
+            // Special cases matching
+            if (name === 'Air Terjun Coban Rais' && key === 'Wana Wisata Coba Rais') {
+              visitCount = value;
+            }
+            if (name === 'Coban Putri' && key === 'Wana Wisata Coban Putri') {
+              visitCount = value;
+            }
+            if (name === 'Coban Talun' && key === 'Wana Wisata Coban Talun') {
+              visitCount = value;
+            }
+            if (name === 'Alun Alun Kota Wisata Batu' && key === 'Alun-Alun Kota Wisata Batu') {
+              visitCount = value;
+            }
+            if (name === 'Jatim Park 1' && key === 'Jatim Park I') {
+              visitCount = value;
+            }
+            if (name === 'Jatim Park 2' && key === 'Jatim Park II') {
+              visitCount = value;
+            }
+            if (name === 'Jatim Park 3' && key === 'Jatim Park III') {
+              visitCount = value;
+            }
+            if (name === 'Museum Angkut' && key === 'Museum Angkut +') {
+              visitCount = value;
+            }
+            if (name === 'Milenial Glow Garden' && key === 'Millenial Glow Garden') {
+              visitCount = value;
+            }
+            if (name === 'Batu Economis Park' && key === 'Predator Fun Park/Batu Economis Park') {
+              visitCount = value;
+            }
+            if (name === 'Lumbung Stroberi' && key === 'Desa Wisata Pandanrejo (Lumbung Stroberi)') {
+              visitCount = value;
+            }
+            if (name === 'Wisata Petik Apel Mandiri' && key === 'Petik Apel Mandiri') {
+              visitCount = value;
+            }
+          });
+        }
+        
+        // Update destination with visit count
+        if (visitCount > 0) {
+          wisataData.destinations[name].visit_count = visitCount;
+          wisataData.destinations[name].jumlah_kunjungan = visitCount;
+          
+          // Update visit category based on actual numbers
+          if (visitCount >= 500000) {
+            wisataData.destinations[name].visit_category = 'TINGGI';
+          } else if (visitCount >= 100000) {
+            wisataData.destinations[name].visit_category = 'SEDANG';
+          } else {
+            wisataData.destinations[name].visit_category = 'RENDAH';
+          }
+        }
+      });
+    }
+    
+    setData(analysisData);
+    setWisataAnalysis(wisataData);
+    
+  } catch (error) {
+    console.error('Failed to load analysis data:', error);
+    toast.error('Gagal memuat data analisis');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleFilterChange = async (filterValue) => {
     try {
@@ -720,27 +808,34 @@ const Analysis = () => {
   };
 
   // Filter destinations based on search and category
-  const getFilteredDestinations = () => {
-    if (!wisataAnalysis || !wisataAnalysis.destinations) return [];
-    
-    let destinations = Object.entries(wisataAnalysis.destinations);
-    
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      destinations = destinations.filter(([_, dest]) => 
-        dest.complaint_level?.toLowerCase() === selectedCategory
-      );
-    }
-    
-    // Filter by search term
-    if (searchTerm) {
-      destinations = destinations.filter(([name, _]) => 
-        name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    return destinations;
-  };
+const getFilteredDestinations = () => {
+  if (!wisataAnalysis || !wisataAnalysis.destinations) return [];
+  
+  let destinations = Object.entries(wisataAnalysis.destinations);
+  
+  // Filter by category
+  if (selectedCategory !== 'all') {
+    destinations = destinations.filter(([_, dest]) => 
+      dest.complaint_level?.toLowerCase() === selectedCategory
+    );
+  }
+  
+  // Filter by search term
+  if (searchTerm) {
+    destinations = destinations.filter(([name, _]) => 
+      name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+  
+  // ALWAYS SORT BY VISIT COUNT (HIGHEST FIRST)
+  destinations.sort((a, b) => {
+    const visitA = a[1].visit_count || a[1].jumlah_kunjungan || 0;
+    const visitB = b[1].visit_count || b[1].jumlah_kunjungan || 0;
+    return visitB - visitA; // Descending order (highest visits first)
+  });
+  
+  return destinations;
+};
 
   const filteredDestinations = getFilteredDestinations();
   const totalPages = Math.ceil(filteredDestinations.length / itemsPerPage);

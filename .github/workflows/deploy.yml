@@ -1,0 +1,55 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build React app
+      run: |
+        CI=false npm run build
+      env:
+        REACT_APP_API_URL: https://apibatas.bpskotabatu.com/api
+        REACT_APP_ENVIRONMENT: production
+    
+    - name: Deploy to server
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 22
+        source: "build/*"
+        target: "/var/www/html/batas.bpskotabatu.com"
+        strip_components: 1
+        rm: true
+    
+    - name: Restart Nginx
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 22
+        script: |
+          sudo nginx -t
+          sudo systemctl reload nginx
+          echo "Deployment completed successfully!"
