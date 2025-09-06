@@ -20,13 +20,18 @@ class AuthService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        // Disable credentials for now due to CORS issues
-        credentials: 'omit', // Changed from 'include' to 'omit'
+        credentials: 'omit',
         body: JSON.stringify({
           email,
           password
         })
       });
+
+      // Check if response is JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server tidak merespon dengan format yang benar");
+      }
 
       const data = await response.json();
 
@@ -56,33 +61,55 @@ class AuthService {
     try {
       const token = localStorage.getItem('auth_token');
       
-      const response = await fetch(`${this.baseURL}/api/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        credentials: 'omit' // Changed from 'include'
-      });
+      // Try to call logout endpoint
+      try {
+        const response = await fetch(`${this.baseURL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          credentials: 'omit'
+        });
 
-      const data = await response.json();
+        // Check if response is JSON
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await response.json();
+          console.log('Logout response:', data);
+        }
+      } catch (apiError) {
+        // If API call fails, just continue with local cleanup
+        console.log('Logout API call failed, cleaning up locally:', apiError);
+      }
       
-      // Clear local storage regardless of response
-      this.currentUser = null;
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
-      sessionStorage.clear();
+      // Always clear local storage regardless of API response
+      this.clearLocalData();
       
-      return data;
+      return {
+        success: true,
+        message: 'Logged out successfully'
+      };
+      
     } catch (error) {
       console.error('Logout error:', error);
       // Clear data anyway
-      this.currentUser = null;
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
-      sessionStorage.clear();
-      throw error;
+      this.clearLocalData();
+      
+      return {
+        success: true,
+        message: 'Logged out successfully (local)'
+      };
     }
+  }
+
+  clearLocalData() {
+    this.currentUser = null;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('remember_email');
+    sessionStorage.clear();
   }
 
   async getCurrentUser() {
@@ -100,26 +127,47 @@ class AuthService {
       
       const token = localStorage.getItem('auth_token');
       
-      const response = await fetch(`${this.baseURL}/api/auth/user`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        credentials: 'omit' // Changed from 'include'
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.success && data.user) {
-          this.currentUser = data.user;
-          localStorage.setItem('user', JSON.stringify(data.user));
-          return data.user;
-        }
+      if (!token) {
+        return null;
       }
       
-      return null;
+      try {
+        const response = await fetch(`${this.baseURL}/api/auth/user`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          credentials: 'omit'
+        });
+        
+        // Check if response is JSON
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          // If not JSON (probably login page), return stored user or null
+          return this.currentUser;
+        }
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.success && data.user) {
+            this.currentUser = data.user;
+            localStorage.setItem('user', JSON.stringify(data.user));
+            return data.user;
+          }
+        } else if (response.status === 401 || response.status === 403) {
+          // Token expired or invalid
+          this.clearLocalData();
+          return null;
+        }
+      } catch (apiError) {
+        console.log('Could not verify user with API, using local data');
+      }
+      
+      return this.currentUser;
+      
     } catch (error) {
       console.error('Get current user error:', error);
       // Try to get from local storage as fallback

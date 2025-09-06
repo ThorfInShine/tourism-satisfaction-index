@@ -60,87 +60,128 @@ class ApiService {
     );
 
     // Response interceptor
-    this.api.interceptors.response.use(
-      (response) => {
-        // Check if response is HTML (error case)
-        const contentType = response.headers['content-type'];
-        if (contentType && contentType.includes('text/html')) {
-          console.error('Received HTML instead of JSON:', response.config.url);
-          
-          // Check if it's a login redirect
-          if (response.data && typeof response.data === 'string' && response.data.includes('login')) {
-            console.warn('API requires authentication');
-            
-            // For admin endpoints, return mock data in development or empty data in production
-            if (response.config.url.includes('/admin')) {
-              return this.getAdminFallbackData(response.config.url);
-            }
-            
-            return {
-              success: false,
-              error: 'Authentication required',
-              requiresAuth: true
-            };
-          }
-          
-          return {
-            success: false,
-            error: 'Invalid response format'
-          };
-        }
+// Di response interceptor apiService.js
+this.api.interceptors.response.use(
+  (response) => {
+    // Check if response is HTML (error case)
+    const contentType = response.headers['content-type'];
+    if (contentType && contentType.includes('text/html')) {
+      console.error('Received HTML instead of JSON:', response.config.url);
+      
+      // Check if it's a login redirect (session expired)
+      if (response.data && typeof response.data === 'string' && 
+          (response.data.includes('login') || response.data.includes('Login'))) {
+        console.warn('Session expired or authentication required');
         
-        console.log('API Response:', response.data);
-        return response.data;
-      },
-      (error) => {
-        console.error('API Response Error:', error);
+        // Don't clear auth for certain endpoints
+        const protectedEndpoints = ['/auth/logout', '/auth/login'];
+        const isProtectedEndpoint = protectedEndpoints.some(endpoint => 
+          response.config.url.includes(endpoint)
+        );
         
-        if (error.response) {
-          const status = error.response.status;
-          const url = error.config.url;
-          
-          // Handle different error types
-          if (status === 405 || status === 401 || status === 403) {
-            // For admin endpoints, return appropriate fallback
-            if (url && url.includes('/admin')) {
-              return this.getAdminFallbackData(url);
-            }
-            
-            // For auth errors on protected endpoints
-            if (status === 401 || status === 403) {
-              return {
-                success: false,
-                error: 'Authentication required',
-                status: status,
-                requiresAuth: true
-              };
-            }
-            
-            return {
-              success: false,
-              error: 'Method not allowed',
-              status: status
-            };
-          }
-          
-          if (status === 404) {
-            return {
-              success: false,
-              error: 'Resource not found',
-              status: 404
-            };
+        if (!isProtectedEndpoint) {
+          // For admin endpoints, return mock data
+          if (response.config.url.includes('/admin')) {
+            return this.getAdminFallbackData(response.config.url);
           }
         }
-        
-        const message = error.response?.data?.error || error.message || 'Network error';
         
         return {
           success: false,
-          error: message,
-          status: error.response?.status
+          error: 'Authentication required',
+          requiresAuth: true
         };
       }
-    );
+      
+      return {
+        success: false,
+        error: 'Invalid response format'
+      };
+    }
+    
+    console.log('API Response:', response.data);
+    return response.data;
+  },
+  (error) => {
+    console.error('API Response Error:', error);
+    
+    if (error.response) {
+      const status = error.response.status;
+      const url = error.config.url;
+      
+      // Handle 401 Unauthorized
+      if (status === 401) {
+        console.warn('Unauthorized access detected');
+        
+        // Don't clear auth for logout endpoint
+        if (!url.includes('/auth/logout')) {
+          // Check if we should clear auth
+          const token = localStorage.getItem('auth_token');
+          if (!token) {
+            // No token, probably not logged in
+            return {
+              success: false,
+              error: 'Authentication required',
+              status: 401,
+              requiresAuth: true
+            };
+          }
+        }
+        
+        // For admin endpoints, return fallback
+        if (url && url.includes('/admin')) {
+          return this.getAdminFallbackData(url);
+        }
+        
+        return {
+          success: false,
+          error: 'Session expired',
+          status: 401,
+          requiresAuth: true
+        };
+      }
+      
+      // Handle other errors...
+      if (status === 405) {
+        // Method not allowed - likely redirected to login page
+        if (url && url.includes('/admin')) {
+          return this.getAdminFallbackData(url);
+        }
+        
+        return {
+          success: false,
+          error: 'Method not allowed',
+          status: 405
+        };
+      }
+      
+      if (status === 403) {
+        return {
+          success: false,
+          error: 'Access forbidden',
+          status: 403,
+          requiresAuth: true
+        };
+      }
+      
+      if (status === 404) {
+        return {
+          success: false,
+          error: 'Resource not found',
+          status: 404
+        };
+      }
+    }
+    
+    const message = error.response?.data?.error || error.message || 'Network error';
+    
+    return {
+      success: false,
+      error: message,
+      status: error.response?.status
+    };
+  }
+);
   }
 
   // Helper method to get fallback data for admin endpoints
@@ -226,29 +267,53 @@ async login(email, password) {
   }
 }
 
-  async logout() {
+// Di apiService.js, update logout method
+async logout() {
+  try {
+    // Try to call the logout endpoint
     try {
       const response = await this.api.post('/auth/logout');
-      
-      // Clear stored data
-      localStorage.removeItem('user');
-      localStorage.removeItem('auth_token');
-      sessionStorage.clear();
-      
-      return response;
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Clear data anyway
-      localStorage.removeItem('user');
-      localStorage.removeItem('auth_token');
-      sessionStorage.clear();
-      
-      return {
-        success: true,
-        message: 'Logged out'
-      };
+      console.log('Logout API response:', response);
+    } catch (apiError) {
+      // If API fails, just continue with cleanup
+      console.log('Logout API failed, continuing with local cleanup');
     }
+    
+    // Always clear stored data regardless of API response
+    localStorage.removeItem('user');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('remember_email');
+    sessionStorage.clear();
+    
+    // Clear authService data if available
+    if (window.authService) {
+      window.authService.currentUser = null;
+    }
+    
+    return {
+      success: true,
+      message: 'Logged out successfully'
+    };
+    
+  } catch (error) {
+    console.error('Logout error:', error);
+    
+    // Clear data anyway
+    localStorage.removeItem('user');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('remember_email');
+    sessionStorage.clear();
+    
+    if (window.authService) {
+      window.authService.currentUser = null;
+    }
+    
+    return {
+      success: true,
+      message: 'Logged out successfully'
+    };
   }
+}
 
   async getCurrentUser() {
     try {
@@ -891,37 +956,104 @@ async getAllWisataAnalysis() {
   }
 
   // Admin APIs with better error handling
-  async getKunjunganData() {
-    try {
-      // Check if user is admin first (skip in development)
-      if (!this.isAdmin() && !this.isDevelopment) {
-        console.warn('Admin access required for kunjungan data');
-        return {
-          success: false,
-          data: [],
-          error: 'Admin access required',
-          requiresAuth: true
-        };
-      }
-      
-      const response = await this.api.get('/admin/kunjungan');
-      
-      // Check if authentication is required
-      if (response && response.requiresAuth) {
-        console.warn('Authentication required for kunjungan data');
-        return response;
-      }
-      
-      return response;
-    } catch (error) {
-      console.error('Failed to get kunjungan data:', error);
+// Di apiService.js, update getKunjunganData dan getSystemInfo
+
+async getKunjunganData() {
+  try {
+    console.log('Fetching kunjungan data...');
+    
+    // Direct API call without auth check for now
+    const response = await this.api.get('/admin/kunjungan');
+    
+    console.log('Kunjungan data response:', response);
+    
+    // Check if we got valid data
+    if (response && response.success && response.kunjungan_data) {
       return {
-        success: false,
-        data: [],
-        error: error.message
+        success: true,
+        kunjungan_data: response.kunjungan_data,
+        data_info: response.data_info
       };
     }
+    
+    // If response has data in different structure
+    if (response && response.kunjungan_data) {
+      return response;
+    }
+    
+    // Fallback
+    console.warn('Invalid kunjungan data response, using fallback');
+    return {
+      success: false,
+      kunjungan_data: {},
+      data_info: null,
+      error: 'Invalid response format'
+    };
+    
+  } catch (error) {
+    console.error('Failed to get kunjungan data:', error);
+    
+    // Return empty data instead of throwing
+    return {
+      success: false,
+      kunjungan_data: {},
+      data_info: null,
+      error: error.message || 'Failed to fetch data'
+    };
   }
+}
+
+async getSystemInfo() {
+  try {
+    console.log('Fetching system info...');
+    
+    // Direct API call without auth check for now
+    const response = await this.api.get('/admin/system_info');
+    
+    console.log('System info response:', response);
+    
+    // Check if we got valid data
+    if (response && response.success && response.system_info) {
+      return {
+        success: true,
+        system_info: response.system_info
+      };
+    }
+    
+    // If response has data in different structure
+    if (response && response.system_info) {
+      return response;
+    }
+    
+    // Fallback
+    console.warn('Invalid system info response, using fallback');
+    return {
+      success: false,
+      system_info: {
+        system: { platform: 'Unknown', python_version: 'Unknown' },
+        data: { total_reviews: 0, kunjungan_wisata_count: 0 },
+        storage: { total_size_mb: 0 },
+        models: { processor_loaded: false, predictor_loaded: false }
+      },
+      error: 'Invalid response format'
+    };
+    
+  } catch (error) {
+    console.error('Failed to get system info:', error);
+    
+    // Return basic info instead of throwing
+    return {
+      success: false,
+      system_info: {
+        system: { platform: 'Unknown', python_version: 'Unknown' },
+        data: { total_reviews: 0, kunjungan_wisata_count: 0 },
+        storage: { total_size_mb: 0 },
+        models: { processor_loaded: false, predictor_loaded: false }
+      },
+      error: error.message || 'Failed to fetch data'
+    };
+  }
+}
 
   async getSystemInfo() {
     try {

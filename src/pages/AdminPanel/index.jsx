@@ -53,23 +53,57 @@ const AdminPanel = ({ user }) => {
     loadInitialData();
   }, []);
 
-  const loadInitialData = async () => {
-    try {
-      setLoading(true);
-      const [kunjunganResponse, systemResponse] = await Promise.all([
-        apiService.getKunjunganData(),
-        apiService.getSystemInfo()
-      ]);
-      
-      setKunjunganData(kunjunganResponse.kunjungan_data || {});
-      setSystemInfo(systemResponse.system_info || null);
-    } catch (error) {
-      console.error('Failed to load admin data:', error);
-      toast.error('Gagal memuat data admin');
-    } finally {
-      setLoading(false);
+// Di AdminPanel index.jsx, update loadInitialData
+
+const loadInitialData = async () => {
+  try {
+    setLoading(true);
+    console.log('Loading admin data...');
+    
+    const [kunjunganResponse, systemResponse] = await Promise.all([
+      apiService.getKunjunganData(),
+      apiService.getSystemInfo()
+    ]);
+    
+    console.log('Admin data loaded:', { kunjunganResponse, systemResponse });
+    
+    // Handle kunjungan data
+    if (kunjunganResponse && kunjunganResponse.kunjungan_data) {
+      setKunjunganData(kunjunganResponse.kunjungan_data);
+      console.log('Kunjungan data set:', kunjunganResponse.kunjungan_data);
+    } else {
+      console.warn('No kunjungan data received');
+      setKunjunganData({});
     }
-  };
+    
+    // Handle system info
+    if (systemResponse && systemResponse.system_info) {
+      setSystemInfo(systemResponse.system_info);
+      console.log('System info set:', systemResponse.system_info);
+    } else {
+      console.warn('No system info received');
+      setSystemInfo(null);
+    }
+    
+    // Show success message if we got data
+    if ((kunjunganResponse && kunjunganResponse.success) || 
+        (systemResponse && systemResponse.success)) {
+      toast.success('Data admin berhasil dimuat');
+    } else {
+      toast.warning('Sebagian data admin tidak dapat dimuat');
+    }
+    
+  } catch (error) {
+    console.error('Failed to load admin data:', error);
+    toast.error('Gagal memuat data admin');
+    
+    // Set empty data
+    setKunjunganData({});
+    setSystemInfo(null);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAddWisata = async () => {
     if (!newWisata.nama.trim() || !newWisata.jumlah) {
