@@ -6,7 +6,9 @@ import {
   PieChart,
   Lightbulb,
   TreePine,
-  ChevronDown
+  ChevronDown,
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -19,11 +21,19 @@ const HomePage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showContent, setShowContent] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     loadStats();
     setupScrollListener();
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const checkMobile = () => {
+    setIsMobile(window.innerWidth < 768);
+  };
 
   const loadStats = async () => {
     try {
@@ -94,19 +104,22 @@ const HomePage = () => {
     >
       <HeroSection 
         tourismImage={tourismImage} 
-        scrollToContent={scrollToContent} 
+        scrollToContent={scrollToContent}
+        isMobile={isMobile}
       />
       
       <FeaturesSection 
         features={features} 
-        showContent={showContent} 
+        showContent={showContent}
+        isMobile={isMobile}
       />
       
       <StatsSection 
         stats={stats} 
         loading={loading} 
         showContent={showContent} 
-        statsImage={statsImage} 
+        statsImage={statsImage}
+        isMobile={isMobile}
       />
       
       <Footer showContent={showContent} />
@@ -114,51 +127,144 @@ const HomePage = () => {
   );
 };
 
-// Hero Section Component
-// Hero Section Component - Gambar DIPERBESAR MAKSIMAL
-const HeroSection = ({ tourismImage, scrollToContent }) => (
-  <section className="h-screen relative overflow-hidden flex items-center">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid lg:grid-cols-2 gap-8 items-center">
-        
-        {/* Hero Image - DIPERBESAR MAKSIMAL */}
-        <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8 }}
-          className="flex justify-center items-center lg:order-1 order-2"
-        >
-          <div className="relative h-[700px] w-full flex items-center justify-center">
-            <motion.img 
-              src={tourismImage}
-              alt="Travel Illustration" 
-              className="w-full max-w-[850px] h-auto scale-110"  // Diperbesar ke 850px + scale 110%
-              animate={{ y: [0, -15, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-              style={{ filter: 'drop-shadow(0 10px 30px rgba(0, 0, 0, 0.2))' }}
-            />
+// Hero Section Component - DESKTOP LAYOUT PRESERVED
+const HeroSection = ({ tourismImage, scrollToContent, isMobile }) => {
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <section className="min-h-screen relative overflow-hidden flex items-center py-16 px-4">
+        <div className="relative z-10 max-w-7xl mx-auto w-full">
+          <div className="flex flex-col items-center text-center space-y-6">
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-md rounded-full text-white text-sm"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              <span>Powered by AI & ML</span>
+            </motion.div>
+
+            {/* Title */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+            >
+              <h1 className="text-4xl font-extrabold text-white leading-tight mb-3">
+                Data Bicara:
+              </h1>
+              <p className="text-xl text-white/90 font-medium">
+                Bagaimana Tingkat Kepuasan di Kota Batu?
+              </p>
+            </motion.div>
+
+            {/* Description */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="text-white/90 text-base leading-relaxed max-w-md"
+            >
+              Platform canggih untuk menganalisis kepuasan wisatawan menggunakan 
+              Machine Learning dan Natural Language Processing.
+            </motion.p>
+
+            {/* Image */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
+              className="relative w-full max-w-sm"
+            >
+              <motion.img 
+                src={tourismImage}
+                alt="Travel Illustration" 
+                className="w-full h-auto"
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                style={{ filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3))' }}
+              />
+            </motion.div>
+
+            {/* CTA Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.6 }}
+              className="flex flex-col w-full max-w-sm space-y-3"
+            >
+              <Link
+                to="/dashboard"
+                className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-orange-500 to-yellow-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                <BarChart3 className="w-5 h-5 mr-2" />
+                Mulai Analisis
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+              
+              <button
+                onClick={scrollToContent}
+                className="w-full flex items-center justify-center px-6 py-4 bg-white/20 backdrop-blur-md text-white font-medium rounded-2xl border border-white/30 hover:bg-white/30 transition-all duration-300"
+              >
+                Lihat Fitur Lengkap
+                <ChevronDown className="w-5 h-5 ml-2" />
+              </button>
+            </motion.div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Hero Content */}
-        <motion.div
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="lg:order-2 order-1"
-        >
-          <HeroTitle />
-          <HeroDescription />
-          <HeroActions scrollToContent={scrollToContent} />
-        </motion.div>
+        <ScrollIndicator onClick={scrollToContent} />
+      </section>
+    );
+  }
+
+  // Desktop Layout - PRESERVED AS ORIGINAL
+  return (
+    <section className="h-screen relative overflow-hidden flex items-center">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-8 items-center">
+          
+          {/* Hero Image - DESKTOP */}
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="flex justify-center items-center lg:order-1 order-2"
+          >
+            <div className="relative h-[700px] w-full flex items-center justify-center">
+              <motion.img 
+                src={tourismImage}
+                alt="Travel Illustration" 
+                className="w-full max-w-[850px] h-auto scale-110"
+                animate={{ y: [0, -15, 0] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                style={{ filter: 'drop-shadow(0 10px 30px rgba(0, 0, 0, 0.2))' }}
+              />
+            </div>
+          </motion.div>
+
+          {/* Hero Content - DESKTOP */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="lg:order-2 order-1"
+          >
+            <HeroTitle />
+            <HeroDescription />
+            <HeroActions scrollToContent={scrollToContent} />
+          </motion.div>
+        </div>
       </div>
-    </div>
 
-    <ScrollIndicator onClick={scrollToContent} />
-  </section>
-);
+      <ScrollIndicator onClick={scrollToContent} />
+    </section>
+  );
+};
 
-// Hero Title Component
+// Desktop Hero Components - PRESERVED AS ORIGINAL
 const HeroTitle = () => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -175,7 +281,6 @@ const HeroTitle = () => (
   </motion.div>
 );
 
-// Hero Description Component
 const HeroDescription = () => (
   <motion.p
     initial={{ opacity: 0, y: 20 }}
@@ -189,7 +294,6 @@ const HeroDescription = () => (
   </motion.p>
 );
 
-// Hero Actions Component
 const HeroActions = ({ scrollToContent }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -241,43 +345,100 @@ const ScrollIndicator = ({ onClick }) => (
 );
 
 // Features Section Component
-const FeaturesSection = ({ features, showContent }) => (
-  <motion.section 
-    className="py-16 relative z-2"
-    initial={{ opacity: 0, y: 50 }}
-    animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-    transition={{ duration: 0.8 }}
-  >
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <motion.div
+const FeaturesSection = ({ features, showContent, isMobile }) => {
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <motion.section 
+        className="py-16 relative z-2"
         initial={{ opacity: 0, y: 50 }}
         animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
         transition={{ duration: 0.8 }}
-        className="text-center mb-16"
       >
-        <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-          Fitur Unggulan
-        </h2>
-        <p className="text-white/80 text-xl max-w-3xl mx-auto leading-relaxed">
-          Teknologi terdepan untuk analisis kepuasan wisatawan
-        </p>
-      </motion.div>
+        <div className="max-w-7xl mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-10"
+          >
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Fitur Unggulan
+            </h2>
+            <p className="text-white/80 text-base max-w-2xl mx-auto">
+              Teknologi terdepan untuk analisis kepuasan wisatawan
+            </p>
+          </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {features.map((feature, index) => (
-          <FeatureCard 
-            key={index}
-            feature={feature}
-            index={index}
-            showContent={showContent}
-          />
-        ))}
+          <div className="space-y-4">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -50 }}
+                animate={showContent ? { opacity: 1, x: 0 } : { opacity: 0, x: -50 }}
+                transition={{ duration: 0.5, delay: showContent ? index * 0.1 : 0 }}
+                className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-xl"
+              >
+                <div className="flex items-start space-x-4">
+                  <div className={`w-14 h-14 bg-gradient-to-r ${feature.gradient} rounded-xl flex items-center justify-center flex-shrink-0 text-white shadow-lg`}>
+                    <feature.icon className="w-7 h-7" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">
+                      {feature.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+    );
+  }
+
+  // Desktop Layout - PRESERVED AS ORIGINAL
+  return (
+    <motion.section 
+      className="py-16 relative z-2"
+      initial={{ opacity: 0, y: 50 }}
+      animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ duration: 0.8 }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
+            Fitur Unggulan
+          </h2>
+          <p className="text-white/80 text-xl max-w-3xl mx-auto leading-relaxed">
+            Teknologi terdepan untuk analisis kepuasan wisatawan
+          </p>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {features.map((feature, index) => (
+            <FeatureCard 
+              key={index}
+              feature={feature}
+              index={index}
+              showContent={showContent}
+            />
+          ))}
+        </div>
       </div>
-    </div>
-  </motion.section>
-);
+    </motion.section>
+  );
+};
 
-// Feature Card Component
+// Feature Card Component - DESKTOP
 const FeatureCard = ({ feature, index, showContent }) => (
   <motion.div
     initial={{ opacity: 0, y: 50 }}
@@ -339,30 +500,110 @@ const AnimatedNumber = ({ value, suffix = '', showContent }) => {
 };
 
 // Stats Section Component
-const StatsSection = ({ stats, loading, showContent, statsImage }) => (
-  <motion.section 
-    className="py-12 relative z-2"
-    initial={{ opacity: 0, y: 50 }}
-    animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-    transition={{ duration: 0.8, delay: 0.3 }}
-  >
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <motion.div
-        className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-2xl border border-white/10"
+const StatsSection = ({ stats, loading, showContent, statsImage, isMobile }) => {
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <motion.section 
+        className="py-12 relative z-2"
         initial={{ opacity: 0, y: 50 }}
         animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-        transition={{ duration: 0.8 }}
+        transition={{ duration: 0.8, delay: 0.3 }}
       >
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
-          <StatsContent stats={stats} loading={loading} showContent={showContent} />
-          <StatsIllustration statsImage={statsImage} showContent={showContent} />
-        </div>
-      </motion.div>
-    </div>
-  </motion.section>
-);
+        <div className="max-w-7xl mx-auto px-4">
+          <motion.div
+            className="bg-white/95 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/10"
+            initial={{ opacity: 0, y: 50 }}
+            animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="space-y-8">
+              {/* Stats Image */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={showContent ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.6 }}
+                className="flex justify-center"
+              >
+                <motion.img 
+                  src={statsImage}
+                  alt="Tourist Stats" 
+                  className="w-48 h-auto"
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ filter: 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.1))' }}
+                />
+              </motion.div>
 
-// Stats Content Component
+              {/* Stats Numbers */}
+              <div className="grid grid-cols-2 gap-6">
+                {loading ? (
+                  <div className="col-span-2 flex justify-center py-8">
+                    <LoadingSpinner size="large" />
+                  </div>
+                ) : (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={showContent ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.6 }}
+                      className="text-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4"
+                    >
+                      <div className="text-3xl font-extrabold text-blue-600 mb-1">
+                        <AnimatedNumber value={stats?.total_reviews || 22000} showContent={showContent} />
+                      </div>
+                      <div className="text-sm font-semibold text-gray-700">Review</div>
+                      <div className="text-xs text-gray-500">Diproses</div>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={showContent ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.6, delay: 0.1 }}
+                      className="text-center bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4"
+                    >
+                      <div className="text-3xl font-extrabold text-green-600 mb-1">
+                        <AnimatedNumber value={stats?.total_destinations || 30} showContent={showContent} />
+                      </div>
+                      <div className="text-sm font-semibold text-gray-700">Destinasi</div>
+                      <div className="text-xs text-gray-500">Wisata</div>
+                    </motion.div>
+                  </>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </motion.section>
+    );
+  }
+
+  // Desktop Layout - PRESERVED AS ORIGINAL
+  return (
+    <motion.section 
+      className="py-12 relative z-2"
+      initial={{ opacity: 0, y: 50 }}
+      animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+      transition={{ duration: 0.8, delay: 0.3 }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          className="bg-white/95 backdrop-blur-md rounded-3xl p-12 shadow-2xl border border-white/10"
+          initial={{ opacity: 0, y: 50 }}
+          animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+            <StatsContent stats={stats} loading={loading} showContent={showContent} />
+            <StatsIllustration statsImage={statsImage} showContent={showContent} />
+          </div>
+        </motion.div>
+      </div>
+    </motion.section>
+  );
+};
+
+// Stats Content Component - DESKTOP
 const StatsContent = ({ stats, loading, showContent }) => (
   <div className="flex flex-col sm:flex-row gap-16 flex-1 justify-center">
     {loading ? (
@@ -390,7 +631,7 @@ const StatsContent = ({ stats, loading, showContent }) => (
   </div>
 );
 
-// Stat Item Component - UKURAN DIPERKECIL
+// Stat Item Component - DESKTOP
 const StatItem = ({ value, title, subtitle, showContent, delay }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0.8 }}
@@ -410,7 +651,7 @@ const StatItem = ({ value, title, subtitle, showContent, delay }) => (
   </motion.div>
 );
 
-// Stats Illustration Component
+// Stats Illustration Component - DESKTOP
 const StatsIllustration = ({ statsImage, showContent }) => (
   <motion.div
     initial={{ opacity: 0, x: 50 }}
@@ -438,7 +679,7 @@ const Footer = ({ showContent }) => (
     transition={{ duration: 0.8, delay: 0.5 }}
   >
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="text-lg">
+      <div className="text-sm sm:text-lg">
         © 2025 Analisis Kepuasan Wisatawan Kota Batu
       </div>
     </div>
