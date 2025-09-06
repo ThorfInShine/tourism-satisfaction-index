@@ -36,7 +36,8 @@ import {
   Briefcase,
   Palmtree,
   SortDesc,
-  Award
+  Award,
+  ImageIcon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -50,6 +51,120 @@ import { apiService } from '../services/apiService';
 
 // Utils
 import { cn } from '../utils/cn';
+
+// Import all images
+import AlunAlunBatu from '../assets/images/wisata/Alunalunbatu.jpg';
+import BatuLoveGarden from '../assets/images/wisata/batu love garden.jpg';
+import BatuRafting from '../assets/images/wisata/batu rafting.jpeg';
+import BNS from '../assets/images/wisata/BNS (Batu Night Spectacular).jpeg';
+import CobanPutri from '../assets/images/wisata/coban putri.jpg';
+import CobanRais from '../assets/images/wisata/coban rais.jpg';
+import CobanTalun from '../assets/images/wisata/Coban-talun.jpg';
+import DesaWisataBumiMulyo from '../assets/images/wisata/desa wisata bumimulyo.jpg';
+import DesaWisataPunten from '../assets/images/wisata/desa wisata punten.jpg';
+import DesaWisataTulungRejo from '../assets/images/wisata/desa wisata tulungrejo.jpg';
+import DesaBumiAji from '../assets/images/wisata/desa-bumiaji-wisata-batu.jpg';
+import EcoGreenPark from '../assets/images/wisata/eco-green-park.jpg';
+import GoaPinus from '../assets/images/wisata/goa pinus.png';
+import GunungBanyak from '../assets/images/wisata/gunung banyak.jpg';
+import JalurPanderman from '../assets/images/wisata/jalur pendakian gunung panderman.jpg';
+import JalurPanderman2 from '../assets/images/wisata/Jalur-Pendakian-Gunung-Panderman.jpg';
+import JatimPark2 from '../assets/images/wisata/Jatim Park II.jpg';
+import JatimPark3 from '../assets/images/wisata/Jatim Park III.jpg';
+import JatimPark1 from '../assets/images/wisata/Jatim-Park-1.jpg';
+import LumbungStroberi from '../assets/images/wisata/Lumbung stroberi.jpg';
+import MilenialGlowGarden from '../assets/images/wisata/milenial-glow-garden.jpeg';
+import MuseumAngkut from '../assets/images/wisata/Museum Angkut.jpg';
+import PemandianCangar from '../assets/images/wisata/Pemandian Air Panas Alam Cangar.jpeg';
+import PredatorFunPark from '../assets/images/wisata/predator-fun-park.jpg';
+import SonggorotiHotSpring from '../assets/images/wisata/songgoriti hot spring.jpeg';
+import TamanDolan from '../assets/images/wisata/taman dolan.jpg';
+import TamanPinusCampervan from '../assets/images/wisata/taman pinus campervan.jpg';
+import TamanSelecta from '../assets/images/wisata/Taman Rekreasi Selecta.jpeg';
+import TirtaNirwana from '../assets/images/wisata/tirta-nirwana-songgoriti.jpeg';
+import WisataPetikApel from '../assets/images/wisata/wisata petik apel mandiri.jpg';
+
+// Image mapping for destinations
+const getDestinationImage = (destinationName) => {
+  const imageMap = {
+    // Exact matches first
+    'Alun Alun Kota Wisata Batu': AlunAlunBatu,
+    'Batu Love Garden': BatuLoveGarden,
+    'Batu Rafting': BatuRafting,
+    'BNS (Batu Night Spectacular)': BNS,
+    'Coban Putri': CobanPutri,
+    'Air Terjun Coban Rais': CobanRais,
+    'Coban Talun': CobanTalun,
+    'Desa Wisata Bumiaji': DesaBumiAji,
+    'Desa Wisata Bumimulyo': DesaWisataBumiMulyo,
+    'Desa Wisata Punten': DesaWisataPunten,
+    'Desa Wisata Tulungrejo': DesaWisataTulungRejo,
+    'Batu Economis Park': EcoGreenPark,
+    'Eco Green Park': EcoGreenPark,
+    'Goa Pinus': GoaPinus,
+    'Gunung Banyak': GunungBanyak,
+    'Jalur Pendakian Gunung Panderman': JalurPanderman,
+    'Jatim Park 1': JatimPark1,
+    'Jatim Park 2': JatimPark2,
+    'Jatim Park II': JatimPark2,
+    'Jatim Park 3': JatimPark3,
+    'Jatim Park III': JatimPark3,
+    'Lumbung Stroberi': LumbungStroberi,
+    'Milenial Glow Garden': MilenialGlowGarden,
+    'Museum Angkut': MuseumAngkut,
+    'Pemandian Air Panas Alam Cangar': PemandianCangar,
+    'Predator Fun Park': PredatorFunPark,
+    'Songgoriti Hot Spring': SonggorotiHotSpring,
+    'Taman Dolan': TamanDolan,
+    'Taman Pinus Campervan': TamanPinusCampervan,
+    'Taman Rekreasi Selecta': TamanSelecta,
+    'Selecta': TamanSelecta,
+    'Tirta Nirwana Songgoriti': TirtaNirwana,
+    'Wisata Petik Apel Mandiri': WisataPetikApel,
+  };
+
+  // Try exact match first
+  if (imageMap[destinationName]) {
+    return imageMap[destinationName];
+  }
+
+  // Try partial matches (case insensitive)
+  const lowerName = destinationName.toLowerCase();
+  
+  // Check for key terms in destination name
+  if (lowerName.includes('alun') || lowerName.includes('aloon')) return AlunAlunBatu;
+  if (lowerName.includes('love garden')) return BatuLoveGarden;
+  if (lowerName.includes('rafting')) return BatuRafting;
+  if (lowerName.includes('bns') || lowerName.includes('night spectacular')) return BNS;
+  if (lowerName.includes('coban putri')) return CobanPutri;
+  if (lowerName.includes('coban rais')) return CobanRais;
+  if (lowerName.includes('coban talun')) return CobanTalun;
+  if (lowerName.includes('bumiaji')) return DesaBumiAji;
+  if (lowerName.includes('bumimulyo')) return DesaWisataBumiMulyo;
+  if (lowerName.includes('punten')) return DesaWisataPunten;
+  if (lowerName.includes('tulungrejo')) return DesaWisataTulungRejo;
+  if (lowerName.includes('eco green') || lowerName.includes('economis')) return EcoGreenPark;
+  if (lowerName.includes('goa pinus') || lowerName.includes('pinus')) return GoaPinus;
+  if (lowerName.includes('gunung banyak')) return GunungBanyak;
+  if (lowerName.includes('panderman')) return JalurPanderman;
+  if (lowerName.includes('jatim park 1') || lowerName.includes('jatim park i')) return JatimPark1;
+  if (lowerName.includes('jatim park 2') || lowerName.includes('jatim park ii')) return JatimPark2;
+  if (lowerName.includes('jatim park 3') || lowerName.includes('jatim park iii')) return JatimPark3;
+  if (lowerName.includes('lumbung') || lowerName.includes('stroberi')) return LumbungStroberi;
+  if (lowerName.includes('milenial') || lowerName.includes('glow')) return MilenialGlowGarden;
+  if (lowerName.includes('museum angkut')) return MuseumAngkut;
+  if (lowerName.includes('cangar') || lowerName.includes('air panas')) return PemandianCangar;
+  if (lowerName.includes('predator')) return PredatorFunPark;
+  if (lowerName.includes('songgoriti') && lowerName.includes('hot')) return SonggorotiHotSpring;
+  if (lowerName.includes('taman dolan')) return TamanDolan;
+  if (lowerName.includes('campervan')) return TamanPinusCampervan;
+  if (lowerName.includes('selecta')) return TamanSelecta;
+  if (lowerName.includes('tirta nirwana')) return TirtaNirwana;
+  if (lowerName.includes('petik apel')) return WisataPetikApel;
+
+  // Default fallback image (you can create a default tourism image)
+  return null;
+};
 
 // Helper Functions
 const getComplaintLevelColor = (level) => {
@@ -82,6 +197,8 @@ const getComplaintLevelIcon = (level) => {
 const DetailModal = ({ isOpen, onClose, destination }) => {
   if (!isOpen || !destination) return null;
 
+  const destinationImage = getDestinationImage(destination.name);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -101,18 +218,43 @@ const DetailModal = ({ isOpen, onClose, destination }) => {
             className="relative bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className={`bg-gradient-to-r ${getComplaintLevelColor(destination.complaint_level)} p-6 text-white`}>
+            {/* Header with Image */}
+            <div className={`bg-gradient-to-r ${getComplaintLevelColor(destination.complaint_level)} p-6 text-white relative overflow-hidden`}>
+              {/* Background Image */}
+              {destinationImage && (
+                <div 
+                  className="absolute inset-0 bg-cover bg-center opacity-20"
+                  style={{ backgroundImage: `url(${destinationImage})` }}
+                />
+              )}
+              
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 rounded-full p-2 transition-colors"
+                className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 rounded-full p-2 transition-colors z-10"
               >
                 <X className="w-5 h-5" />
               </button>
               
-              <div className="flex items-start gap-3">
-                <MapPin className="w-6 h-6 mt-1" />
-                <div>
+              <div className="flex items-start gap-4 relative z-10">
+                {/* Destination Image */}
+                <div className="flex-shrink-0">
+                  {destinationImage ? (
+                    <img
+                      src={destinationImage}
+                      alt={destination.name}
+                      className="w-20 h-20 rounded-xl object-cover border-2 border-white/30 shadow-lg"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div className="w-20 h-20 rounded-xl bg-white/20 flex items-center justify-center border-2 border-white/30" style={{ display: destinationImage ? 'none' : 'flex' }}>
+                    <MapPin className="w-8 h-8" />
+                  </div>
+                </div>
+                
+                <div className="flex-1">
                   <h2 className="text-2xl font-bold mb-2">{destination.name}</h2>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-1">
@@ -403,7 +545,7 @@ const MethodologySection = () => {
                 </div>
               </div>
 
-              {/* Visit Level - FIXED POSITION */}
+              {/* Visit Level */}
               <div className="mb-6">
                 <h4 className="text-gray-800 font-bold mb-4 flex items-center gap-2">
                   <Users className="w-5 h-5 text-cyan-600" />
@@ -703,8 +845,17 @@ const Analysis = () => {
               </div>
             </div>
 
-            {/* Search and Filter Bar */}
-            <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100 mb-6">
+            {/* Enhanced Search and Filter Bar with Clear Complaint Filter Labels */}
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
+              {/* Header with Clear Filter Explanation */}
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Filter className="w-6 h-6 text-purple-600" />
+                  <h3 className="text-lg font-bold text-gray-900">Filter Berdasarkan Tingkat Keluhan</h3>
+                </div>
+              </div>
+
+              {/* Search and Filter Controls */}
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -731,6 +882,7 @@ const Analysis = () => {
                   )}
                 </div>
 
+                {/* Enhanced Filter Buttons with Clear Labels */}
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
@@ -738,13 +890,14 @@ const Analysis = () => {
                       setCurrentPage(1);
                     }}
                     className={cn(
-                      "px-4 py-2 rounded-xl font-medium transition-all",
+                      "px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2",
                       selectedCategory === 'all' 
-                        ? "bg-purple-600 text-white" 
+                        ? "bg-purple-600 text-white shadow-lg" 
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     )}
                   >
-                    Semua
+                    <Filter className="w-4 h-4" />
+                    Semua Level
                   </button>
                   <button
                     onClick={() => {
@@ -752,13 +905,14 @@ const Analysis = () => {
                       setCurrentPage(1);
                     }}
                     className={cn(
-                      "px-4 py-2 rounded-xl font-medium transition-all",
+                      "px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2",
                       selectedCategory === 'tinggi' 
-                        ? "bg-red-500 text-white" 
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        ? "bg-red-500 text-white shadow-lg" 
+                        : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
                     )}
                   >
-                    Tinggi
+                    <AlertTriangle className="w-4 h-4" />
+                    Keluhan Tinggi
                   </button>
                   <button
                     onClick={() => {
@@ -766,13 +920,14 @@ const Analysis = () => {
                       setCurrentPage(1);
                     }}
                     className={cn(
-                      "px-4 py-2 rounded-xl font-medium transition-all",
+                      "px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2",
                       selectedCategory === 'sedang' 
-                        ? "bg-yellow-500 text-white" 
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        ? "bg-yellow-500 text-white shadow-lg" 
+                        : "bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200"
                     )}
                   >
-                    Sedang
+                    <AlertCircle className="w-4 h-4" />
+                    Keluhan Sedang
                   </button>
                   <button
                     onClick={() => {
@@ -780,176 +935,224 @@ const Analysis = () => {
                       setCurrentPage(1);
                     }}
                     className={cn(
-                      "px-4 py-2 rounded-xl font-medium transition-all",
+                      "px-4 py-2 rounded-xl font-medium transition-all flex items-center gap-2",
                       selectedCategory === 'rendah' 
-                        ? "bg-green-500 text-white" 
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        ? "bg-green-500 text-white shadow-lg" 
+                        : "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
                     )}
                   >
-                    Rendah
+                    <CheckCircle className="w-4 h-4" />
+                    Keluhan Rendah
                   </button>
                 </div>
               </div>
 
+              {/* Results Summary */}
               {filteredDestinations.length > 0 && (
-                <div className="mt-4 text-sm text-gray-600 text-center">
-                  Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, filteredDestinations.length)}-
-                  {Math.min(currentPage * itemsPerPage, filteredDestinations.length)} dari {filteredDestinations.length} destinasi
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-purple-600" />
+                      <span className="text-gray-700 font-medium">
+                        Filter Aktif: 
+                        <span className="ml-1 font-bold text-purple-600">
+                          {selectedCategory === 'all' ? 'Semua Level Keluhan' :
+                           selectedCategory === 'tinggi' ? 'Keluhan Tinggi (>20%)' :
+                           selectedCategory === 'sedang' ? 'Keluhan Sedang (10-20%)' :
+                           'Keluhan Rendah (<10%)'}
+                        </span>
+                      </span>
+                    </div>
+                    <span className="text-gray-600">
+                      Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, filteredDestinations.length)}-
+                      {Math.min(currentPage * itemsPerPage, filteredDestinations.length)} dari {filteredDestinations.length} destinasi
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Destination Cards */}
+            {/* Destination Cards with Images */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               <AnimatePresence mode="wait">
-                {paginatedDestinations.map(([name, destination], index) => (
-                  <motion.div
-                    key={`${name}-${currentPage}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow"
-                  >
-                    {/* Header with gradient */}
-                    <div className={`bg-gradient-to-r ${getComplaintLevelColor(destination.complaint_level)} p-4 text-white`}>
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-start gap-2">
-                          <MapPin className="w-5 h-5 mt-1 flex-shrink-0" />
-                          <h3 className="font-bold text-lg leading-tight">{name}</h3>
-                        </div>
-                        <div className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-full">
-                          <Star className="w-4 h-4" />
-                          <span className="text-sm font-bold">
-                            {destination.average_rating?.toFixed(1) || 'N/A'}/5
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <i className="fas fa-map-marker-alt text-sm"></i>
-                        <span className="text-sm">
-                          {destination.complaint_level === 'tinggi' ? 'Perlu Perhatian Urgent' :
-                           destination.complaint_level === 'sedang' ? 'Perlu Monitoring' :
-                           'Performa Excellent'}
-                        </span>
-                        <div className="ml-auto bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase">
-                          <i className={`${getComplaintLevelIcon(destination.complaint_level)} mr-1`}></i>
-                          KUNJUNGAN {destination.visit_category || 'N/A'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="p-4 grid grid-cols-3 gap-4 border-b border-gray-100">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {destination.total_reviews || 0}
-                        </div>
-                        <div className="text-xs text-gray-500 uppercase">Reviews</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-500">
-                          {destination.complaint_percentage?.toFixed(1) || 0}%
-                        </div>
-                        <div className="text-xs text-gray-500 uppercase">Keluhan</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-500">
-                          {destination.positive_percentage?.toFixed(1) || 0}%
-                        </div>
-                        <div className="text-xs text-gray-500 uppercase">Positif</div>
-                      </div>
-                    </div>
-
-                    {/* Rating Distribution */}
-                    {destination.rating_distribution && (
-                      <div className="p-4 border-b border-gray-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Star className="w-4 h-4 text-yellow-500" />
-                          <span className="text-sm font-semibold text-gray-700">Distribusi Rating</span>
-                        </div>
-                        <div className="space-y-2">
-                          {[5, 4, 3, 2, 1].map((rating) => {
-                            const count = destination.rating_distribution[rating] || 0;
-                            const percentage = destination.total_reviews > 0 
-                              ? (count / destination.total_reviews * 100).toFixed(0)
-                              : 0;
-                            return (
-                              <div key={rating} className="flex items-center gap-2">
-                                <span className="text-xs text-gray-600 w-3">{rating}★</span>
-                                <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                                  <div 
-                                    className={cn(
-                                      "h-full transition-all duration-500",
-                                      rating >= 4 ? "bg-green-500" : rating === 3 ? "bg-yellow-500" : "bg-red-500"
-                                    )}
-                                    style={{ width: `${percentage}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-gray-600 w-10 text-right">{percentage}%</span>
-                                <span className="text-xs text-gray-500 w-8 text-right">{count}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Top Complaints with Carousel */}
-                    {destination.complaint_percentage > 0 && (
-                      <div className="p-4">
-                        <ComplaintCarousel 
-                          complaints={destination.top_complaints || [
-                            {
-                              category: 'Keluhan Umum',
-                              count: Math.round((destination.complaint_percentage / 100) * destination.total_reviews),
-                              text: destination.sample_review || 'Terdapat beberapa keluhan dari pengunjung'
-                            }
-                          ]}
-                          destinationName={name}
-                        />
+                {paginatedDestinations.map(([name, destination], index) => {
+                  const destinationImage = getDestinationImage(name);
+                  
+                  return (
+                    <motion.div
+                      key={`${name}-${currentPage}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 hover:shadow-2xl transition-shadow"
+                    >
+                      {/* Image Header */}
+                      <div className="relative h-48 overflow-hidden">
+                        {destinationImage ? (
+                          <img
+                            src={destinationImage}
+                            alt={name}
+                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
                         
-                        {/* View All Button */}
-                        <button
-                          onClick={() => handleViewDetail(name, destination)}
-                          className="mt-3 w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg py-2 px-3 text-sm font-medium transition-colors"
+                        {/* Fallback when no image or image fails to load */}
+                        <div 
+                          className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center"
+                          style={{ display: destinationImage ? 'none' : 'flex' }}
                         >
-                          <Eye className="w-4 h-4" />
-                          Lihat Selengkapnya
-                        </button>
-                      </div>
-                    )}
+                          <div className="text-center text-gray-500">
+                            <ImageIcon className="w-16 h-16 mx-auto mb-2" />
+                            <p className="text-sm font-medium">Foto Tidak Tersedia</p>
+                          </div>
+                        </div>
 
-                    {/* Sentiment Bar */}
-                    <div className="px-4 pb-4">
-                      <div className="flex gap-1 text-xs font-medium">
-                        <div 
-                          className="bg-green-500 text-white px-2 py-1 rounded-l-lg text-center transition-all"
-                          style={{ width: `${destination.positive_percentage || 0}%` }}
-                        >
-                          {destination.positive_percentage > 10 && `${destination.positive_percentage?.toFixed(0)}%`}
-                        </div>
-                        <div 
-                          className="bg-yellow-500 text-white px-2 py-1 text-center transition-all"
-                          style={{ width: `${destination.neutral_percentage || 0}%` }}
-                        >
-                          {destination.neutral_percentage > 10 && `${destination.neutral_percentage?.toFixed(0)}%`}
-                        </div>
-                        <div 
-                          className="bg-red-500 text-white px-2 py-1 rounded-r-lg text-center transition-all"
-                          style={{ width: `${destination.negative_percentage || 0}%` }}
-                        >
-                          {destination.negative_percentage > 10 && `${destination.negative_percentage?.toFixed(0)}%`}
+                        {/* Overlay with gradient */}
+                        <div className={`absolute inset-0 bg-gradient-to-t ${getComplaintLevelColor(destination.complaint_level)} opacity-80`} />
+                        
+                        {/* Content overlay */}
+                        <div className="absolute inset-0 p-4 flex flex-col justify-between text-white">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-1 bg-white/20 px-2 py-1 rounded-full">
+                              <Star className="w-4 h-4" />
+                              <span className="text-sm font-bold">
+                                {destination.average_rating?.toFixed(1) || 'N/A'}/5
+                              </span>
+                            </div>
+                            <div className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase">
+                              <i className={`${getComplaintLevelIcon(destination.complaint_level)} mr-1`}></i>
+                              KUNJUNGAN {destination.visit_category || 'N/A'}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-bold text-lg leading-tight mb-1">{name}</h3>
+                            <p className="text-sm opacity-90">
+                              {destination.complaint_level === 'tinggi' ? 'Perlu Perhatian Urgent' :
+                               destination.complaint_level === 'sedang' ? 'Perlu Monitoring' :
+                               'Performa Excellent'}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>Positif</span>
-                        <span>Netral</span>
-                        <span>Negatif</span>
+
+                      {/* Stats */}
+                      <div className="p-4 grid grid-cols-3 gap-4 border-b border-gray-100">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-gray-900">
+                            {destination.total_reviews || 0}
+                          </div>
+                          <div className="text-xs text-gray-500 uppercase">Reviews</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-red-500">
+                            {destination.complaint_percentage?.toFixed(1) || 0}%
+                          </div>
+                          <div className="text-xs text-gray-500 uppercase">Keluhan</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-500">
+                            {destination.positive_percentage?.toFixed(1) || 0}%
+                          </div>
+                          <div className="text-xs text-gray-500 uppercase">Positif</div>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+
+                      {/* Rating Distribution */}
+                      {destination.rating_distribution && (
+                        <div className="p-4 border-b border-gray-100">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Star className="w-4 h-4 text-yellow-500" />
+                            <span className="text-sm font-semibold text-gray-700">Distribusi Rating</span>
+                          </div>
+                          <div className="space-y-2">
+                            {[5, 4, 3, 2, 1].map((rating) => {
+                              const count = destination.rating_distribution[rating] || 0;
+                              const percentage = destination.total_reviews > 0 
+                                ? (count / destination.total_reviews * 100).toFixed(0)
+                                : 0;
+                              return (
+                                <div key={rating} className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-600 w-3">{rating}★</span>
+                                  <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                    <div 
+                                      className={cn(
+                                        "h-full transition-all duration-500",
+                                        rating >= 4 ? "bg-green-500" : rating === 3 ? "bg-yellow-500" : "bg-red-500"
+                                      )}
+                                      style={{ width: `${percentage}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-gray-600 w-10 text-right">{percentage}%</span>
+                                  <span className="text-xs text-gray-500 w-8 text-right">{count}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Top Complaints with Carousel */}
+                      {destination.complaint_percentage > 0 && (
+                        <div className="p-4">
+                          <ComplaintCarousel 
+                            complaints={destination.top_complaints || [
+                              {
+                                category: 'Keluhan Umum',
+                                count: Math.round((destination.complaint_percentage / 100) * destination.total_reviews),
+                                text: destination.sample_review || 'Terdapat beberapa keluhan dari pengunjung'
+                              }
+                            ]}
+                            destinationName={name}
+                          />
+                          
+                          {/* View All Button */}
+                          <button
+                            onClick={() => handleViewDetail(name, destination)}
+                            className="mt-3 w-full flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg py-2 px-3 text-sm font-medium transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Lihat Selengkapnya
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Sentiment Bar */}
+                      <div className="px-4 pb-4">
+                        <div className="flex gap-1 text-xs font-medium">
+                          <div 
+                            className="bg-green-500 text-white px-2 py-1 rounded-l-lg text-center transition-all"
+                            style={{ width: `${destination.positive_percentage || 0}%` }}
+                          >
+                            {destination.positive_percentage > 10 && `${destination.positive_percentage?.toFixed(0)}%`}
+                          </div>
+                          <div 
+                            className="bg-yellow-500 text-white px-2 py-1 text-center transition-all"
+                            style={{ width: `${destination.neutral_percentage || 0}%` }}
+                          >
+                            {destination.neutral_percentage > 10 && `${destination.neutral_percentage?.toFixed(0)}%`}
+                          </div>
+                          <div 
+                            className="bg-red-500 text-white px-2 py-1 rounded-r-lg text-center transition-all"
+                            style={{ width: `${destination.negative_percentage || 0}%` }}
+                          >
+                            {destination.negative_percentage > 10 && `${destination.negative_percentage?.toFixed(0)}%`}
+                          </div>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Positif</span>
+                          <span>Netral</span>
+                          <span>Negatif</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
 
@@ -991,7 +1194,7 @@ const Analysis = () => {
           </motion.div>
         )}
 
-        {/* Methodology Section - WITHOUT SORTING INFO */}
+        {/* Methodology Section */}
         <MethodologySection />
 
         {/* Detail Modal */}

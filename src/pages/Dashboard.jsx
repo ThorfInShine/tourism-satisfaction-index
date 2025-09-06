@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3,
@@ -34,11 +34,11 @@ import { apiService } from '../services/apiService';
 // Utils
 import { cn } from '../utils/cn';
 
-// Updated DestinationsList component with new design
-const DestinationsList = ({ filter, data }) => {
+// Fixed DestinationsList component with proper hover handling
+const DestinationsListCSS = ({ filter, data }) => {
   const [destinations, setDestinations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAll, setShowAll] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     loadDestinations();
@@ -88,7 +88,6 @@ const DestinationsList = ({ filter, data }) => {
         });
         
         setDestinations(filtered);
-        setShowAll(false); // Reset to show limited items when filter changes
         
         console.log(`Filter: ${filter}, Found ${filtered.length} destinations`);
       }
@@ -99,73 +98,11 @@ const DestinationsList = ({ filter, data }) => {
     }
   };
 
-  // Helper function to determine visit category for display
-  const getVisitCategory = (dest) => {
-    const category = dest.visit_category || dest.visit_level || dest.kunjungan_level || dest.kunjungan_category;
-    if (category) {
-      return category.toLowerCase();
-    }
-    
-    const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
-    if (visitCount >= 1000) return 'tinggi';
-    if (visitCount >= 500) return 'sedang';
-    return 'rendah';
-  };
-
-  // Component for the horizontal scroll list
-  const HorizontalScrollList = () => {
-    const topDestinations = destinations.slice(0, 10);
-    
-    if (topDestinations.length === 0) return null;
-    
-    return (
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 mb-6 overflow-hidden">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-          <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
-            <MapPin className="w-4 h-4 text-blue-600" />
-            <span className="font-semibold text-sm text-gray-700">
-              Destinasi ({destinations.length}):
-            </span>
-          </div>
-          
-          {topDestinations.map(([name, dest], index) => {
-            const rating = dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0';
-            const visitCategory = getVisitCategory(dest);
-            
-            return (
-              <motion.div
-                key={name}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className={cn(
-                  "flex-shrink-0 px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
-                  "hover:scale-105"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">{name}</span>
-                  <span className="text-sm font-bold text-yellow-500">{rating}★</span>
-                </div>
-              </motion.div>
-            );
-          })}
-          
-          {destinations.length > 10 && (
-            <div className="flex-shrink-0 px-3 py-2">
-              <ChevronRight className="w-4 h-4 text-gray-400" />
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-        <div className="flex items-center justify-center py-8">
-          <LoadingSpinner size="medium" />
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 overflow-hidden">
+        <div className="flex items-center justify-center py-4">
+          <LoadingSpinner size="small" />
         </div>
       </div>
     );
@@ -173,196 +110,261 @@ const DestinationsList = ({ filter, data }) => {
 
   if (destinations.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-        <div className="text-center py-8">
-          <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-600">Tidak ada destinasi untuk filter ini</p>
-          <p className="text-sm text-gray-500 mt-2">
-            {filter === 'high' && 'Destinasi dengan kunjungan ≥ 1000'}
-            {filter === 'medium' && 'Destinasi dengan kunjungan 500-999'}
-            {filter === 'low' && 'Destinasi dengan kunjungan < 500'}
-          </p>
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 overflow-hidden">
+        <div className="text-center py-4">
+          <p className="text-gray-600 text-sm">Tidak ada destinasi untuk filter ini</p>
         </div>
       </div>
     );
   }
 
-  // Determine how many items to show
-  const itemsToShow = showAll ? destinations.length : Math.min(5, destinations.length);
-  const displayedDestinations = destinations.slice(0, itemsToShow);
+  // Calculate animation duration based on number of destinations
+  const animationDuration = Math.max(20, destinations.length * 2);
+
+  return (
+    <div 
+      className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="relative">
+        {/* Gradient overlays */}
+        <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-blue-50 via-blue-50/80 to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-purple-50 via-purple-50/80 to-transparent z-10 pointer-events-none" />
+        
+        <div className="flex overflow-hidden">
+          <motion.div 
+            className="flex gap-2 pr-2"
+            animate={{
+              x: isHovered ? "0%" : ["0%", "-50%"],
+            }}
+            transition={{
+              x: {
+                repeat: isHovered ? 0 : Infinity,
+                repeatType: "loop",
+                duration: animationDuration,
+                ease: "linear",
+              },
+            }}
+          >
+            {/* First set */}
+            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+              <MapPin className="w-4 h-4 text-blue-600" />
+              <span className="font-semibold text-sm text-gray-700">
+                Destinasi ({destinations.length}):
+              </span>
+            </div>
+            
+            {destinations.map(([name, dest], index) => {
+              const rating = dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0';
+              
+              return (
+                <div
+                  key={`${name}-1`}
+                  className={cn(
+                    "flex-shrink-0 px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
+                    "hover:scale-105"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">{name}</span>
+                    <span className="text-sm font-bold text-yellow-500">{rating}★</span>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {/* Duplicate set for seamless loop */}
+            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+              <MapPin className="w-4 h-4 text-blue-600" />
+              <span className="font-semibold text-sm text-gray-700">
+                Destinasi ({destinations.length}):
+              </span>
+            </div>
+            
+            {destinations.map(([name, dest], index) => {
+              const rating = dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0';
+              
+              return (
+                <div
+                  key={`${name}-2`}
+                  className={cn(
+                    "flex-shrink-0 px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer",
+                    "hover:scale-105"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">{name}</span>
+                    <span className="text-sm font-bold text-yellow-500">{rating}★</span>
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Alternative version with CSS-only animation (more reliable)
+const DestinationsListPureCSS = ({ filter, data }) => {
+  const [destinations, setDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDestinations();
+  }, [filter]);
+
+  const loadDestinations = async () => {
+    try {
+      setLoading(true);
+      const analysisData = await apiService.getAllWisataAnalysis();
+      
+      if (analysisData.success && analysisData.destinations) {
+        let filtered = Object.entries(analysisData.destinations);
+        
+        if (filter !== 'all') {
+          filtered = filtered.filter(([name, dest]) => {
+            const visitCategory = (
+              dest.visit_category || 
+              dest.visit_level || 
+              dest.kunjungan_level || 
+              dest.kunjungan_category ||
+              ''
+            ).toLowerCase();
+            
+            const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
+            
+            if (visitCategory) {
+              if (filter === 'high') return visitCategory === 'tinggi' || visitCategory === 'high';
+              if (filter === 'medium') return visitCategory === 'sedang' || visitCategory === 'medium';
+              if (filter === 'low') return visitCategory === 'rendah' || visitCategory === 'low';
+            } 
+            else if (visitCount > 0) {
+              if (filter === 'high') return visitCount >= 1000;
+              if (filter === 'medium') return visitCount >= 500 && visitCount < 1000;
+              if (filter === 'low') return visitCount < 500;
+            }
+            
+            return false;
+          });
+        }
+        
+        filtered.sort((a, b) => {
+          const countA = a[1].visit_count || a[1].jumlah_kunjungan || 0;
+          const countB = b[1].visit_count || b[1].jumlah_kunjungan || 0;
+          return countB - countA;
+        });
+        
+        setDestinations(filtered);
+      }
+    } catch (error) {
+      console.error('Failed to load destinations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 overflow-hidden">
+        <div className="flex items-center justify-center py-4">
+          <LoadingSpinner size="small" />
+        </div>
+      </div>
+    );
+  }
+
+  if (destinations.length === 0) {
+    return (
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 overflow-hidden">
+        <div className="text-center py-4">
+          <p className="text-gray-600 text-sm">Tidak ada destinasi untuk filter ini</p>
+        </div>
+      </div>
+    );
+  }
+
+  const animationDuration = Math.max(20, destinations.length * 2);
 
   return (
     <>
-      {/* Horizontal Scroll List */}
-      <HorizontalScrollList />
-
-      {/* Main List */}
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Users className="w-6 h-6 text-white" />
-              <h2 className="text-xl font-bold text-white">
-                Daftar Destinasi Wisata
-              </h2>
-            </div>
-            <span className="bg-white/20 px-3 py-1 rounded-full text-sm text-white font-medium">
-              {destinations.length} Destinasi
-            </span>
-          </div>
-        </div>
-
-        <div className="p-6">
-          <div className="space-y-4">
-            {displayedDestinations.map(([name, dest], index) => {
-              const complaintLevel = dest.complaint_level?.toLowerCase();
-              const visitCategory = getVisitCategory(dest);
-              const visitCount = dest.visit_count || dest.jumlah_kunjungan || 0;
-              const rating = dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0';
-              const totalReviews = dest.total_reviews || 0;
-              const positivePercentage = dest.positive_percentage || 0;
-              const neutralPercentage = dest.neutral_percentage || 0;
-              const negativePercentage = dest.complaint_percentage || dest.negative_percentage || 0;
+      <style jsx>{`
+        @keyframes scroll-destinations {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        
+        .destinations-scroll {
+          animation: scroll-destinations ${animationDuration}s linear infinite;
+        }
+        
+        .destinations-container:hover .destinations-scroll {
+          animation-play-state: paused;
+        }
+      `}</style>
+      
+      <div className="destinations-container bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-3 overflow-hidden">
+        <div className="relative">
+          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-blue-50 via-blue-50/80 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-purple-50 via-purple-50/80 to-transparent z-10 pointer-events-none" />
+          
+          <div className="flex overflow-hidden">
+            <div className="destinations-scroll flex gap-2 pr-2">
+              {/* First set */}
+              <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+                <MapPin className="w-4 h-4 text-blue-600" />
+                <span className="font-semibold text-sm text-gray-700">
+                  Destinasi ({destinations.length}):
+                </span>
+              </div>
               
-              return (
-                <motion.div
-                  key={name}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-200 overflow-hidden"
-                >
-                  <div className="p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-sm">
-                          <span className="text-lg font-bold text-blue-600">
-                            {index + 1}
-                          </span>
-                        </div>
-                        
-                        <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 text-lg mb-2">
-                            {name}
-                          </h3>
-                          
-                          <div className="flex flex-wrap items-center gap-4">
-                            {/* Rating */}
-                            <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                              <span className="text-sm font-semibold text-gray-700">
-                                {rating}
-                              </span>
-                            </div>
-                            
-                            {/* Reviews */}
-                            <div className="flex items-center gap-1">
-                              <MessageSquare className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">
-                                {totalReviews.toLocaleString()} reviews
-                              </span>
-                            </div>
-                            
-                            {/* Visits */}
-                            <div className="flex items-center gap-1">
-                              <Users className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm text-gray-600">
-                                {visitCount.toLocaleString()} kunjungan
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end gap-2">
-                        {/* Visit Level Badge */}
-                        <span className={cn(
-                          "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
-                          visitCategory === 'tinggi' && "bg-green-100 text-green-700",
-                          visitCategory === 'sedang' && "bg-yellow-100 text-yellow-700",
-                          visitCategory === 'rendah' && "bg-red-100 text-red-700"
-                        )}>
-                          {visitCategory === 'tinggi' ? 'HIGH' : 
-                           visitCategory === 'sedang' ? 'MEDIUM' : 'LOW'}
-                        </span>
-                        
-                        {/* Complaint Percentage */}
-                        <div className="text-right">
-                          <div className={cn(
-                            "text-2xl font-bold",
-                            negativePercentage >= 40 && "text-red-500",
-                            negativePercentage >= 20 && negativePercentage < 40 && "text-orange-500",
-                            negativePercentage < 20 && "text-green-500"
-                          )}>
-                            {negativePercentage.toFixed(1)}%
-                          </div>
-                          <div className="text-xs text-gray-500 font-medium">Keluhan</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Sentiment Progress Bar */}
-                    <div className="mt-4">
-                      <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
-                        <motion.div 
-                          className="bg-gradient-to-r from-green-400 to-green-500"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${positivePercentage}%` }}
-                          transition={{ duration: 0.8, delay: index * 0.1 }}
-                        />
-                        <motion.div 
-                          className="bg-gradient-to-r from-yellow-400 to-yellow-500"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${neutralPercentage}%` }}
-                          transition={{ duration: 0.8, delay: index * 0.1 + 0.1 }}
-                        />
-                        <motion.div 
-                          className="bg-gradient-to-r from-red-400 to-red-500"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${negativePercentage}%` }}
-                          transition={{ duration: 0.8, delay: index * 0.1 + 0.2 }}
-                        />
-                      </div>
-                      
-                      <div className="flex justify-between mt-2">
-                        <span className="text-xs text-green-600 font-medium">
-                          Positif: {positivePercentage.toFixed(1)}%
-                        </span>
-                        <span className="text-xs text-yellow-600 font-medium">
-                          Netral: {neutralPercentage.toFixed(1)}%
-                        </span>
-                        <span className="text-xs text-red-600 font-medium">
-                          Negatif: {negativePercentage.toFixed(1)}%
-                        </span>
-                      </div>
+              {destinations.map(([name, dest], index) => {
+                const rating = dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0';
+                
+                return (
+                  <div
+                    key={`${name}-1`}
+                    className="flex-shrink-0 px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-105"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">{name}</span>
+                      <span className="text-sm font-bold text-yellow-500">{rating}★</span>
                     </div>
                   </div>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* Show More/Less Button */}
-          {destinations.length > 5 && (
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => setShowAll(!showAll)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-              >
-                {showAll ? (
-                  <>
-                    <span>Tampilkan Lebih Sedikit</span>
-                    <ChevronDown className="w-4 h-4 rotate-180" />
-                  </>
-                ) : (
-                  <>
-                    <span>Tampilkan Semua ({destinations.length})</span>
-                    <ChevronDown className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+                );
+              })}
+              
+              {/* Duplicate set for seamless loop */}
+              <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+                <MapPin className="w-4 h-4 text-blue-600" />
+                <span className="font-semibold text-sm text-gray-700">
+                  Destinasi ({destinations.length}):
+                </span>
+              </div>
+              
+              {destinations.map(([name, dest], index) => {
+                const rating = dest.average_rating?.toFixed(1) || dest.avg_rating?.toFixed(1) || '0.0';
+                
+                return (
+                  <div
+                    key={`${name}-2`}
+                    className="flex-shrink-0 px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:scale-105"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">{name}</span>
+                      <span className="text-sm font-bold text-yellow-500">{rating}★</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </>
@@ -581,14 +583,14 @@ const Dashboard = () => {
           </motion.div>
         </motion.div>
 
-        {/* Destinations List Section - NEW DESIGN */}
+        {/* Destinations List Section - Using the more reliable CSS version */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45 }}
           className="mb-8"
         >
-          <DestinationsList filter={currentFilter} data={data} />
+          <DestinationsListPureCSS filter={currentFilter} data={data} />
         </motion.div>
 
         {/* Metrics Cards */}
@@ -737,7 +739,7 @@ const Dashboard = () => {
           </motion.div>
         )}
 
-        {/* Quadrant Analysis - Positioned right before Complaint Analysis, only for 'all' filter */}
+        {/* Quadrant Analysis */}
         {currentFilter === 'all' && quadrantData && quadrantData.success && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

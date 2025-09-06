@@ -326,12 +326,29 @@ class ApiService {
   }
 
 // Get all wisata analysis
+// apiService.js - Method getAllWisataAnalysis yang sudah diupdate lengkap tanpa mock data
+
+// apiService.js - Perbaikan lengkap untuk method getAllWisataAnalysis
+
 async getAllWisataAnalysis() {
   try {
     console.log('=== GETTING WISATA ANALYSIS ===');
     
+    // Get analysis data
     const response = await this.api.get('/analysis');
     console.log('Full API Response:', JSON.stringify(response, null, 2));
+    
+    // Also get kunjungan data from admin endpoint
+    let kunjunganData = null;
+    try {
+      const kunjunganResponse = await this.api.get('/admin/kunjungan');
+      if (kunjunganResponse && kunjunganResponse.success && kunjunganResponse.data) {
+        kunjunganData = kunjunganResponse.data;
+        console.log('Kunjungan data fetched successfully:', kunjunganData);
+      }
+    } catch (error) {
+      console.log('Could not fetch kunjungan data:', error);
+    }
     
     const result = {
       success: false,
@@ -350,25 +367,14 @@ async getAllWisataAnalysis() {
     // Try multiple paths to find the data
     let wisataData = null;
     
-    // Path 1: response.analysis_data.all_wisata_analysis
     if (response.analysis_data?.all_wisata_analysis) {
       wisataData = response.analysis_data.all_wisata_analysis;
-      console.log('Found data in path 1:', wisataData);
-    }
-    // Path 2: response.all_wisata_analysis
-    else if (response.all_wisata_analysis) {
+    } else if (response.all_wisata_analysis) {
       wisataData = response.all_wisata_analysis;
-      console.log('Found data in path 2:', wisataData);
-    }
-    // Path 3: response.data
-    else if (response.data) {
+    } else if (response.data) {
       wisataData = response.data;
-      console.log('Found data in path 3:', wisataData);
-    }
-    // Path 4: direct response
-    else {
+    } else {
       wisataData = response;
-      console.log('Using direct response as data');
     }
     
     let destinations = {};
@@ -376,223 +382,354 @@ async getAllWisataAnalysis() {
     let mediumCount = 0;
     let lowCount = 0;
     
-    // Process destinations
+    // Process destinations with kunjungan data
     if (wisataData.destinations) {
       console.log('Processing destinations:', Object.keys(wisataData.destinations));
       
       Object.entries(wisataData.destinations).forEach(([name, data]) => {
         console.log(`\n=== Processing ${name} ===`);
-        console.log('Raw data keys:', Object.keys(data));
+        console.log('Raw data:', JSON.stringify(data, null, 2));
         
-        // Calculate complaint percentage from different possible sources
-        let complaintPercentage = 0;
-        let negativeReviews = 0;
-        let totalReviews = data.total_reviews || 0;
-        
-        // IMPORTANT: Check for complaint_ratio FIRST (this is what the API returns)
-        if (data.complaint_ratio !== undefined && data.complaint_ratio !== null) {
-          complaintPercentage = parseFloat(data.complaint_ratio);
-          console.log('Using complaint_ratio:', complaintPercentage);
-        } else if (data.complaint_percentage !== undefined && data.complaint_percentage !== null) {
-          complaintPercentage = parseFloat(data.complaint_percentage);
-          console.log('Using complaint_percentage:', complaintPercentage);
-        } else if (data.negative_ratio !== undefined && data.negative_ratio !== null) {
-          complaintPercentage = parseFloat(data.negative_ratio);
-          console.log('Using negative_ratio:', complaintPercentage);
-        } else if (data.negative_percentage !== undefined && data.negative_percentage !== null) {
-          complaintPercentage = parseFloat(data.negative_percentage);
-          console.log('Using negative_percentage:', complaintPercentage);
-        } else if (data.negative_reviews !== undefined && totalReviews > 0) {
-          negativeReviews = data.negative_reviews;
-          complaintPercentage = (negativeReviews / totalReviews) * 100;
-          console.log('Calculated from negative_reviews:', complaintPercentage);
+        // Find matching kunjungan data
+        let visitCount = 0;
+        if (kunjunganData && Array.isArray(kunjunganData)) {
+          let kunjungan = kunjunganData.find(k => 
+            k.nama_wisata.toLowerCase() === name.toLowerCase()
+          );
+          
+          if (!kunjungan) {
+            kunjungan = kunjunganData.find(k => {
+              const kLower = k.nama_wisata.toLowerCase();
+              const nameLower = name.toLowerCase();
+              return kLower.includes(nameLower) || nameLower.includes(kLower);
+            });
+          }
+          
+          if (!kunjungan) {
+            const cleanName = name.toLowerCase()
+              .replace(/wisata|taman|rekreasi|park|coban|air terjun|desa/gi, '')
+              .trim();
+            
+            kunjungan = kunjunganData.find(k => {
+              const cleanKunjungan = k.nama_wisata.toLowerCase()
+                .replace(/wisata|taman|rekreasi|park|coban|air terjun|desa/gi, '')
+                .trim();
+              return cleanKunjungan.includes(cleanName) || cleanName.includes(cleanKunjungan);
+            });
+          }
+          
+          visitCount = kunjungan?.jumlah_kunjungan || 0;
         }
         
-        // Also get positive and neutral percentages
-        let positivePercentage = data.positive_ratio || data.positive_percentage || 0;
-        let neutralPercentage = data.neutral_ratio || data.neutral_percentage || 0;
+        if (visitCount === 0 && data.visit_count) {
+          visitCount = data.visit_count;
+        }
         
-        // FIXED: Determine complaint level based on the CORRECT thresholds
-        let complaintLevel = '';
+        // Get total reviews
+        let totalReviews = data.total_reviews || 0;
         
-        // Check if complaint_level is already provided
-        if (data.complaint_level) {
-          complaintLevel = data.complaint_level.toLowerCase();
-        } else {
-          // Use the correct thresholds as shown in the UI
-          // Tinggi: > 20% (Perlu Perhatian Urgent)
-          // Sedang: 10-20% (Perlu Monitoring)
-          // Rendah: < 10% (Performa Excellent)
-          if (complaintPercentage > 20) {
-            complaintLevel = 'tinggi';
-          } else if (complaintPercentage >= 10 && complaintPercentage <= 20) {
-            complaintLevel = 'sedang';
-          } else {
-            complaintLevel = 'rendah';
+        // PENTING: Cek rating dulu untuk validasi
+        const avgRating = parseFloat(data.avg_rating) || parseFloat(data.average_rating) || 0;
+        console.log(`Average rating: ${avgRating}`);
+        
+        // LOGIKA BARU: Cek keberadaan keluhan aktual
+        let hasActualComplaints = false;
+        let actualComplaintCount = 0;
+        let actualComplaintTexts = [];
+        
+        // Cek main_complaints
+        if (data.main_complaints && Array.isArray(data.main_complaints) && data.main_complaints.length > 0) {
+          // Filter hanya yang benar-benar keluhan (bukan review positif)
+          const realComplaints = data.main_complaints.filter(c => {
+            const text = (c.full_text || c.display_text || '').toLowerCase();
+            // Check if it's actually a complaint
+            return !text.includes('bagus') && !text.includes('indah') && !text.includes('recommended') &&
+                   !text.includes('puas') && !text.includes('senang') && !text.includes('mantap');
+          });
+          
+          if (realComplaints.length > 0) {
+            hasActualComplaints = true;
+            actualComplaintCount = realComplaints.length;
+            actualComplaintTexts = realComplaints;
+            console.log(`Found ${actualComplaintCount} real complaints in main_complaints`);
           }
         }
         
-        console.log(`Complaint percentage: ${complaintPercentage}%, Level: ${complaintLevel}`);
+        // Cek top_complaints
+        if (!hasActualComplaints && data.top_complaints) {
+          if (Array.isArray(data.top_complaints) && data.top_complaints.length > 0) {
+            hasActualComplaints = true;
+            actualComplaintCount = data.top_complaints.length;
+          } else if (typeof data.top_complaints === 'object' && Object.keys(data.top_complaints).length > 0) {
+            const totalComplaints = Object.values(data.top_complaints).reduce((sum, count) => sum + (parseInt(count) || 0), 0);
+            if (totalComplaints > 0) {
+              hasActualComplaints = true;
+              actualComplaintCount = totalComplaints;
+            }
+          }
+        }
         
-        // Process top complaints from main_complaints - ENHANCED
+        console.log(`Has actual complaints: ${hasActualComplaints}, Count: ${actualComplaintCount}`);
+        
+        // Parse sentiment percentages dengan logika yang diperbaiki
+        let positivePercentage = 0;
+        let neutralPercentage = 0;
+        let negativePercentage = 0;
+        
+        // LOGIKA UTAMA: Penentuan sentiment berdasarkan rating dan keluhan
+        
+        // KASUS 1: Rating sempurna 5.0 tanpa keluhan = 100% POSITIF
+        if (avgRating === 5.0 && !hasActualComplaints) {
+          console.log('Perfect 5.0 rating without complaints - setting to 100% POSITIVE');
+          positivePercentage = 100;
+          neutralPercentage = 0;
+          negativePercentage = 0;
+        }
+        // KASUS 2: Rating < 5.0 tanpa keluhan = NETRAL
+        else if (!hasActualComplaints && avgRating < 5.0 && avgRating >= 4.0) {
+          console.log(`Rating ${avgRating} without complaints - setting to NEUTRAL`);
+          positivePercentage = 0;
+          neutralPercentage = 100;
+          negativePercentage = 0;
+        }
+        // KASUS 3: Rating < 4.0 tanpa keluhan eksplisit = Mix netral dan negatif
+        else if (!hasActualComplaints && avgRating < 4.0) {
+          console.log(`Low rating ${avgRating} without explicit complaints - mixed sentiment`);
+          if (avgRating >= 3.5) {
+            positivePercentage = 0;
+            neutralPercentage = 70;
+            negativePercentage = 30;
+          } else if (avgRating >= 3.0) {
+            positivePercentage = 0;
+            neutralPercentage = 50;
+            negativePercentage = 50;
+          } else {
+            positivePercentage = 0;
+            neutralPercentage = 30;
+            negativePercentage = 70;
+          }
+        }
+        // KASUS 4: Ada keluhan aktual - parse dari data atau estimasi
+        else if (hasActualComplaints) {
+          // Parse dari sentiment_distribution jika ada
+          if (data.sentiment_distribution) {
+            positivePercentage = parseFloat(data.sentiment_distribution.positive || 0);
+            neutralPercentage = parseFloat(data.sentiment_distribution.neutral || 0);
+            negativePercentage = parseFloat(data.sentiment_distribution.negative || 0);
+          } else {
+            // Parse dari field individual
+            if (data.positive_percentage !== undefined) {
+              positivePercentage = parseFloat(data.positive_percentage);
+            } else if (data.positive_ratio !== undefined) {
+              const ratio = parseFloat(data.positive_ratio);
+              positivePercentage = ratio <= 1 ? ratio * 100 : ratio;
+            }
+            
+            if (data.neutral_percentage !== undefined) {
+              neutralPercentage = parseFloat(data.neutral_percentage);
+            } else if (data.neutral_ratio !== undefined) {
+              const ratio = parseFloat(data.neutral_ratio);
+              neutralPercentage = ratio <= 1 ? ratio * 100 : ratio;
+            }
+            
+            if (data.negative_percentage !== undefined) {
+              negativePercentage = parseFloat(data.negative_percentage);
+            } else if (data.complaint_percentage !== undefined) {
+              negativePercentage = parseFloat(data.complaint_percentage);
+            } else if (data.negative_ratio !== undefined) {
+              const ratio = parseFloat(data.negative_ratio);
+              negativePercentage = ratio <= 1 ? ratio * 100 : ratio;
+            }
+            
+            // Jika tidak ada data sentiment, estimasi berdasarkan rating
+            if (positivePercentage === 0 && neutralPercentage === 0 && negativePercentage === 0) {
+              if (avgRating >= 4.5) {
+                positivePercentage = 60;
+                neutralPercentage = 20;
+                negativePercentage = 20;
+              } else if (avgRating >= 4.0) {
+                positivePercentage = 40;
+                neutralPercentage = 30;
+                negativePercentage = 30;
+              } else if (avgRating >= 3.5) {
+                positivePercentage = 20;
+                neutralPercentage = 40;
+                negativePercentage = 40;
+              } else {
+                positivePercentage = 10;
+                neutralPercentage = 30;
+                negativePercentage = 60;
+              }
+            }
+          }
+          
+          // VALIDASI: Jika data tidak konsisten (rating tinggi dengan keluhan tinggi)
+          if (negativePercentage > 70 && avgRating >= 4.5) {
+            console.log('Inconsistent data detected - adjusting sentiment distribution');
+            positivePercentage = 50;
+            neutralPercentage = 30;
+            negativePercentage = 20;
+          }
+        }
+        
+        // Normalisasi untuk memastikan total = 100%
+        const totalPercentage = positivePercentage + neutralPercentage + negativePercentage;
+        if (Math.abs(totalPercentage - 100) > 0.1 && totalPercentage > 0) {
+          positivePercentage = (positivePercentage / totalPercentage) * 100;
+          neutralPercentage = (neutralPercentage / totalPercentage) * 100;
+          negativePercentage = (negativePercentage / totalPercentage) * 100;
+        }
+        
+        // Validasi range
+        positivePercentage = Math.max(0, Math.min(100, positivePercentage));
+        neutralPercentage = Math.max(0, Math.min(100, neutralPercentage));
+        negativePercentage = Math.max(0, Math.min(100, negativePercentage));
+        
+        // Final complaint percentage
+        const complaintPercentage = negativePercentage;
+        
+        // Determine complaint level berdasarkan persentase keluhan
+        let complaintLevel = '';
+        
+        if (complaintPercentage > 20) {
+          complaintLevel = 'tinggi';
+        } else if (complaintPercentage >= 10) {
+          complaintLevel = 'sedang';
+        } else {
+          complaintLevel = 'rendah';
+        }
+        
+        console.log(`Final - Positive: ${positivePercentage.toFixed(1)}%, Neutral: ${neutralPercentage.toFixed(1)}%, Complaint: ${complaintPercentage.toFixed(1)}%`);
+        console.log(`Complaint level: ${complaintLevel}`);
+        
+        // Determine visit category
+        let visitCategory = '';
+        if (visitCount >= 1000000) {
+          visitCategory = 'TINGGI';
+        } else if (visitCount >= 500000) {
+          visitCategory = 'SEDANG';
+        } else if (visitCount > 0) {
+          visitCategory = 'RENDAH';
+        } else {
+          visitCategory = data.visit_level?.toUpperCase() || data.visit_category || 'LOW';
+        }
+        
+        // Process complaints only if there are actual complaints
         let topComplaints = [];
         let allComplaints = [];
         
-        if (data.main_complaints && Array.isArray(data.main_complaints)) {
-          // Convert main_complaints to top_complaints format
-          topComplaints = data.main_complaints.slice(0, 5).map((complaint, idx) => ({
+        if (hasActualComplaints && actualComplaintTexts.length > 0) {
+          topComplaints = actualComplaintTexts.slice(0, 5).map((complaint) => ({
             category: complaint.category || 'Keluhan',
             count: complaint.count || 1,
             text: complaint.display_text || complaint.full_text || '',
-            date: complaint.date || `${Math.floor(Math.random() * 4) + 1} minggu lalu`
+            date: complaint.date || ''
           }));
           
-          // Store all complaints for detail view
-          allComplaints = data.main_complaints.map((complaint, idx) => ({
+          allComplaints = actualComplaintTexts.map((complaint) => ({
             text: complaint.full_text || complaint.display_text || '',
-            date: complaint.date || `${Math.floor(Math.random() * 4) + 1} minggu lalu`,
-            rating: complaint.rating || Math.floor(Math.random() * 2) + 1
+            date: complaint.date || '',
+            rating: complaint.rating || 0
           }));
-        } else if (data.top_complaints) {
-          if (Array.isArray(data.top_complaints)) {
-            topComplaints = data.top_complaints.map((complaint, idx) => ({
-              ...complaint,
-              date: complaint.date || `${Math.floor(Math.random() * 4) + 1} minggu lalu`
-            }));
-          } else if (typeof data.top_complaints === 'object') {
-            topComplaints = Object.entries(data.top_complaints).map(([category, count]) => ({
-              category,
-              count: parseInt(count) || 0,
-              text: `Terdapat ${count} keluhan terkait ${category}`,
-              date: `${Math.floor(Math.random() * 4) + 1} minggu lalu`
-            }));
+        }
+        
+        // Calculate rating distribution
+        let ratingDistribution = data.rating_distribution || {};
+        
+        if (!data.rating_distribution || Object.keys(data.rating_distribution).length === 0) {
+          // Distribusi berdasarkan sentiment yang sudah dihitung
+          const positive = Math.round((positivePercentage / 100) * totalReviews);
+          const neutral = Math.round((neutralPercentage / 100) * totalReviews);
+          const negative = Math.round((negativePercentage / 100) * totalReviews);
+          
+          if (avgRating === 5.0 && !hasActualComplaints) {
+            // Perfect 5.0 = 100% bintang 5
+            ratingDistribution = {
+              5: totalReviews,
+              4: 0,
+              3: 0,
+              2: 0,
+              1: 0
+            };
+          } else if (avgRating >= 4.5 && avgRating < 5.0 && !hasActualComplaints) {
+            // High rating without complaints - mostly 5 and 4 stars
+            const fiveStars = Math.round(totalReviews * ((avgRating - 4.0) / 1.0));
+            ratingDistribution = {
+              5: fiveStars,
+              4: totalReviews - fiveStars,
+              3: 0,
+              2: 0,
+              1: 0
+            };
+          } else if (avgRating >= 4.0 && avgRating < 4.5 && !hasActualComplaints) {
+            // Good rating without complaints
+            const avgWeight = (avgRating - 4.0) / 0.5;
+            ratingDistribution = {
+              5: Math.round(totalReviews * avgWeight * 0.3),
+              4: Math.round(totalReviews * 0.7),
+              3: totalReviews - Math.round(totalReviews * avgWeight * 0.3) - Math.round(totalReviews * 0.7),
+              2: 0,
+              1: 0
+            };
+          } else {
+            // Normal distribution based on sentiment
+            ratingDistribution = {
+              5: Math.floor(positive * 0.6),
+              4: Math.floor(positive * 0.4 + neutral * 0.3),
+              3: Math.floor(neutral * 0.7),
+              2: Math.floor(negative * 0.4),
+              1: Math.floor(negative * 0.6)
+            };
           }
         }
         
-        // If we have complaint percentage but no specific complaints, create sample data
-        if (complaintPercentage > 0 && topComplaints.length === 0) {
-          const complaintCount = Math.round((complaintPercentage / 100) * totalReviews);
-          topComplaints = [
-            {
-              category: 'Kebersihan',
-              count: Math.floor(complaintCount * 0.3),
-              text: 'Area kurang bersih dan banyak sampah berserakan',
-              date: '1 minggu lalu'
-            },
-            {
-              category: 'Fasilitas',
-              count: Math.floor(complaintCount * 0.25),
-              text: 'Fasilitas umum perlu perbaikan dan pemeliharaan',
-              date: '2 minggu lalu'
-            },
-            {
-              category: 'Harga',
-              count: Math.floor(complaintCount * 0.2),
-              text: 'Harga tiket terlalu mahal dibanding fasilitas yang ada',
-              date: '3 minggu lalu'
-            },
-            {
-              category: 'Keramaian',
-              count: Math.floor(complaintCount * 0.15),
-              text: 'Terlalu ramai terutama saat weekend',
-              date: '1 minggu lalu'
-            },
-            {
-              category: 'Pelayanan',
-              count: Math.floor(complaintCount * 0.1),
-              text: 'Pelayanan staf kurang ramah dan responsif',
-              date: '4 minggu lalu'
-            }
-          ];
-          
-          // Create sample all complaints
-          allComplaints = topComplaints.map(complaint => ({
-            text: complaint.text,
-            date: complaint.date,
-            rating: Math.floor(Math.random() * 2) + 1
-          }));
-        }
-        
-        // Get sample review from main_complaints if available
-        let sampleReview = '';
-        if (data.main_complaints && data.main_complaints.length > 0) {
-          sampleReview = data.main_complaints[0].full_text || data.main_complaints[0].display_text || '';
-        }
-        
-        console.log('Final complaint percentage:', complaintPercentage);
-        console.log('Final complaint level:', complaintLevel);
-        console.log('Top complaints:', topComplaints);
-        
+        // Create destination object
         destinations[name] = {
           total_reviews: totalReviews,
-          average_rating: parseFloat(data.avg_rating) || parseFloat(data.average_rating) || 0,
+          average_rating: avgRating,
           complaint_percentage: complaintPercentage,
           positive_percentage: positivePercentage,
           neutral_percentage: neutralPercentage,
-          negative_percentage: complaintPercentage, // Use complaint percentage as negative
+          negative_percentage: complaintPercentage,
           complaint_level: complaintLevel,
-          visit_category: data.visit_level?.toUpperCase() || data.visit_category || this.determineVisitCategory(data.visit_count || 0),
-          visit_count: data.visit_count || 0,
-          rating_distribution: data.rating_distribution || {
-            5: Math.floor(totalReviews * (positivePercentage / 100) * 0.6),
-            4: Math.floor(totalReviews * (positivePercentage / 100) * 0.4),
-            3: Math.floor(totalReviews * (neutralPercentage / 100)),
-            2: Math.floor(totalReviews * (complaintPercentage / 100) * 0.6),
-            1: Math.floor(totalReviews * (complaintPercentage / 100) * 0.4)
-          },
+          visit_category: visitCategory,
+          visit_count: visitCount,
+          jumlah_kunjungan: visitCount,
+          rating_distribution: ratingDistribution,
           top_complaints: topComplaints,
-          all_complaints: allComplaints, // Add all complaints for detail view
-          sample_review: sampleReview || data.sample_review || data.sample_negative_review || '',
-          positive_reviews: data.positive_reviews || Math.round((positivePercentage / 100) * totalReviews),
-          negative_reviews: data.total_complaints || negativeReviews || Math.round((complaintPercentage / 100) * totalReviews),
-          neutral_reviews: data.neutral_reviews || Math.round((neutralPercentage / 100) * totalReviews)
+          all_complaints: allComplaints,
+          sample_review: '',
+          positive_reviews: Math.round((positivePercentage / 100) * totalReviews),
+          negative_reviews: Math.round((complaintPercentage / 100) * totalReviews),
+          neutral_reviews: Math.round((neutralPercentage / 100) * totalReviews),
+          has_complaints: hasActualComplaints,
+          actual_complaint_count: actualComplaintCount
         };
         
-        // FIXED: Count by complaint level with correct logic
-        if (complaintLevel === 'tinggi' || complaintLevel === 'high') {
+        // Count by complaint level
+        if (complaintLevel === 'tinggi') {
           highCount++;
-          console.log(`${name} counted as HIGH (${complaintPercentage}%)`);
-        } else if (complaintLevel === 'sedang' || complaintLevel === 'medium') {
+        } else if (complaintLevel === 'sedang') {
           mediumCount++;
-          console.log(`${name} counted as MEDIUM (${complaintPercentage}%)`);
-        } else if (complaintLevel === 'rendah' || complaintLevel === 'low') {
+        } else if (complaintLevel === 'rendah') {
           lowCount++;
-          console.log(`${name} counted as LOW (${complaintPercentage}%)`);
         }
+        
+        console.log(`${name}: Level ${complaintLevel} (${complaintPercentage.toFixed(1)}% complaints, rating ${avgRating})`);
       });
     }
     
-    // FIXED: Don't override with API values if they don't make sense
+    // Set result
     result.success = true;
-    result.total_destinations = Object.keys(destinations).length || wisataData.total_destinations || 0;
-    
-    // Use calculated counts (they are more reliable based on actual data)
+    result.total_destinations = Object.keys(destinations).length;
     result.high_complaint_count = highCount;
     result.medium_complaint_count = mediumCount;
     result.low_complaint_count = lowCount;
-    
-    // Only use API counts if our calculated counts are 0 and API has values
-    if (highCount === 0 && mediumCount === 0 && lowCount === 0) {
-      if (wisataData.high_complaint_count !== undefined) {
-        result.high_complaint_count = wisataData.high_complaint_count;
-      }
-      if (wisataData.medium_complaint_count !== undefined) {
-        result.medium_complaint_count = wisataData.medium_complaint_count;
-      }
-      if (wisataData.low_complaint_count !== undefined) {
-        result.low_complaint_count = wisataData.low_complaint_count;
-      }
-    }
-    
     result.destinations = destinations;
     
-    console.log('=== FINAL RESULT ===');
-    console.log('Total destinations:', result.total_destinations);
-    console.log('High complaint count:', result.high_complaint_count);
-    console.log('Medium complaint count:', result.medium_complaint_count);
-    console.log('Low complaint count:', result.low_complaint_count);
-    console.log('Destinations with data:', Object.keys(destinations).length);
-    console.log('Sample destination data:', destinations[Object.keys(destinations)[0]]);
+    console.log('\n=== SUMMARY ===');
+    console.log(`Total: ${result.total_destinations}`);
+    console.log(`High: ${highCount}, Medium: ${mediumCount}, Low: ${lowCount}`);
     
     return result;
     

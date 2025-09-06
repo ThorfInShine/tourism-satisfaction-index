@@ -12,7 +12,7 @@ import { apiService } from '../services/apiService';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 // Images
-const tourismImage = "https://res.cloudinary.com/dk2tex4to/image/upload/v1755629984/Desain_tanpa_judul-removebg-preview_izdxie.png";
+import tourismImage from '../assets/images/tourism-illustration.png';
 const statsImage = "https://res.cloudinary.com/dk2tex4to/image/upload/v1755625548/ChatGPT_Image_Aug_20__2025__12_35_04_AM-removebg-preview_gttvad.png";
 
 const HomePage = () => {
@@ -115,23 +115,24 @@ const HomePage = () => {
 };
 
 // Hero Section Component
+// Hero Section Component - Gambar DIPERBESAR MAKSIMAL
 const HeroSection = ({ tourismImage, scrollToContent }) => (
   <section className="h-screen relative overflow-hidden flex items-center">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="grid lg:grid-cols-2 gap-8 items-center">
         
-        {/* Hero Image */}
+        {/* Hero Image - DIPERBESAR MAKSIMAL */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
           className="flex justify-center items-center lg:order-1 order-2"
         >
-          <div className="relative h-[500px] flex items-center justify-center p-8">
+          <div className="relative h-[700px] w-full flex items-center justify-center">
             <motion.img 
               src={tourismImage}
               alt="Travel Illustration" 
-              className="w-full max-w-[450px] h-auto"
+              className="w-full max-w-[850px] h-auto scale-110"  // Diperbesar ke 850px + scale 110%
               animate={{ y: [0, -15, 0] }}
               transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
               style={{ filter: 'drop-shadow(0 10px 30px rgba(0, 0, 0, 0.2))' }}
