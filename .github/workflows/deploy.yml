@@ -9,7 +9,7 @@ env:
   NODE_VERSION: '18'
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -42,33 +42,13 @@ jobs:
         echo "✅ Build completed successfully"
         echo "Build contents:"
         ls -la build/
-        echo "Build size: $(du -sh build/)"
+        echo "Total files: $(find build/ -type f | wc -l)"
       env:
         CI: false
         REACT_APP_API_URL: https://apibatas.bpskotabatu.com/api
         REACT_APP_ENV: production
         REACT_APP_DOMAIN: batas.bpskotabatu.com
         GENERATE_SOURCEMAP: false
-        
-    - name: 🗜️ Create Deployment Package
-      run: |
-        echo "Creating deployment package..."
-        cd build
-        tar -czf ../deploy.tar.gz *
-        cd ..
-        
-        echo "Package info:"
-        ls -lh deploy.tar.gz
-        echo "Package contents (first 20 files):"
-        tar -tzf deploy.tar.gz | head -20
-        
-        # Verify package is not empty
-        if [ ! -s deploy.tar.gz ]; then
-          echo "❌ Package is empty!"
-          exit 1
-        fi
-        
-        echo "✅ Package created successfully"
         
     - name: 🧪 Test SSH Connection
       uses: appleboy/ssh-action@v0.1.8
@@ -82,46 +62,22 @@ jobs:
           echo "✅ SSH connection successful"
           echo "Server: $(hostname)"
           echo "User: $(whoami)"
-          echo "Current directory: $(pwd)"
-          echo "Temp directory contents:"
-          ls -la /tmp/ | grep -E "(deploy|batu)" || echo "No deploy files found"
+          echo "Date: $(date)"
           
-    - name: 🚀 Upload Deployment Package
+    - name: 🚀 Deploy Files to Server
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         password: ${{ secrets.SERVER_PASSWORD }}
         port: 22
-        source: "deploy.tar.gz"
-        target: "/tmp/"
+        source: "build/*"
+        target: "/tmp/batu-tourism-deploy/"
         timeout: 300s
         overwrite: true
-        debug: true
+        rm: true
         
-    - name: 🔍 Verify Upload
-      uses: appleboy/ssh-action@v0.1.8
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        password: ${{ secrets.SERVER_PASSWORD }}
-        port: 22
-        timeout: 30s
-        script: |
-          echo "Checking uploaded file..."
-          if [ -f "/tmp/deploy.tar.gz" ]; then
-            echo "✅ File found: /tmp/deploy.tar.gz"
-            echo "File size: $(ls -lh /tmp/deploy.tar.gz)"
-            echo "File contents preview:"
-            tar -tzf /tmp/deploy.tar.gz | head -10
-          else
-            echo "❌ File not found: /tmp/deploy.tar.gz"
-            echo "Files in /tmp:"
-            ls -la /tmp/ | grep -E "(deploy|batu|tar\.gz)" || echo "No relevant files found"
-            exit 1
-          fi
-          
-    - name: 🔄 Deploy to Website Directory
+    - name: 🔄 Move Files and Configure
       uses: appleboy/ssh-action@v0.1.8
       with:
         host: ${{ secrets.SERVER_HOST }}
@@ -137,35 +93,49 @@ jobs:
           # Variables
           DEPLOY_DIR="/var/www/html/batas.bpskotabatu.com"
           BACKUP_DIR="/var/backups/batas.bpskotabatu.com"
+          TEMP_DIR="/tmp/batu-tourism-deploy"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
           
           # Create directories
           sudo mkdir -p $DEPLOY_DIR
           sudo mkdir -p $BACKUP_DIR
           
+          # Check if temp files exist
+          if [ ! -d "$TEMP_DIR" ]; then
+            echo "❌ Temporary deployment files not found at $TEMP_DIR"
+            echo "Contents of /tmp:"
+            ls -la /tmp/ | grep -i batu || echo "No batu-related files found"
+            exit 1
+          fi
+          
+          echo "📁 Temporary files found:"
+          ls -la $TEMP_DIR/
+          
           # Backup current deployment
           if [ -d "$DEPLOY_DIR" ] && [ "$(ls -A $DEPLOY_DIR 2>/dev/null)" ]; then
             echo "📦 Creating backup..."
             sudo tar -czf $BACKUP_DIR/backup_${TIMESTAMP}.tar.gz -C $DEPLOY_DIR . || true
             echo "✅ Backup created: backup_${TIMESTAMP}.tar.gz"
+            
+            # Keep only last 5 backups
+            sudo find $BACKUP_DIR -name "backup_*.tar.gz" -type f -printf '%T@ %p\n' | sort -n | head -n -5 | cut -d' ' -f2- | sudo xargs rm -f 2>/dev/null || true
           fi
           
           # Clear deployment directory
           echo "🧹 Clearing deployment directory..."
           sudo rm -rf $DEPLOY_DIR/*
           
-          # Verify deployment package exists
-          if [ ! -f "/tmp/deploy.tar.gz" ]; then
-            echo "❌ Deployment package not found in /tmp/deploy.tar.gz"
-            echo "Available files in /tmp:"
-            ls -la /tmp/
+          # Move files from temp to deployment directory
+          echo "📦 Moving files to deployment directory..."
+          sudo cp -r $TEMP_DIR/* $DEPLOY_DIR/
+          
+          # Verify critical files
+          if [ ! -f "$DEPLOY_DIR/index.html" ]; then
+            echo "❌ Critical file missing: index.html"
+            echo "Files in deployment directory:"
+            ls -la $DEPLOY_DIR/
             exit 1
           fi
-          
-          # Extract new files
-          echo "📦 Extracting deployment package..."
-          sudo tar -xzf /tmp/deploy.tar.gz -C $DEPLOY_DIR/
-          echo "✅ Files extracted successfully"
           
           # Set permissions
           echo "🔐 Setting permissions..."
@@ -173,60 +143,107 @@ jobs:
           sudo chmod -R 755 $DEPLOY_DIR
           sudo find $DEPLOY_DIR -type f -exec chmod 644 {} \;
           
-          # Verify deployment
-          echo "🔍 Verifying deployment..."
-          if [ -f "$DEPLOY_DIR/index.html" ]; then
-            echo "✅ index.html found"
-            echo "Deployed files count: $(find $DEPLOY_DIR -type f | wc -l)"
-            echo "Deployment size: $(du -sh $DEPLOY_DIR)"
-          else
-            echo "❌ index.html not found!"
-            echo "Files in deployment directory:"
-            ls -la $DEPLOY_DIR/
-            exit 1
-          fi
+          # Set specific permissions for important files
+          sudo chmod 644 $DEPLOY_DIR/index.html 2>/dev/null || true
+          sudo chmod 644 $DEPLOY_DIR/manifest.json 2>/dev/null || true
+          sudo chmod 644 $DEPLOY_DIR/robots.txt 2>/dev/null || true
           
-          # Test nginx config
+          echo "📊 Deployment statistics:"
+          echo "   - Files deployed: $(find $DEPLOY_DIR -type f | wc -l)"
+          echo "   - Total size: $(du -sh $DEPLOY_DIR | cut -f1)"
+          echo "   - Main files:"
+          find $DEPLOY_DIR -maxdepth 1 -type f -name "*.html" -o -name "*.json" -o -name "*.txt" | head -5
+          
+          # Test nginx configuration
           echo "🔧 Testing nginx configuration..."
           sudo nginx -t
+          if [ $? -ne 0 ]; then
+            echo "❌ Nginx configuration test failed"
+            
+            # Restore from backup if available
+            LATEST_BACKUP=$(sudo find $BACKUP_DIR -name "backup_*.tar.gz" -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2- 2>/dev/null)
+            if [ -n "$LATEST_BACKUP" ] && [ -f "$LATEST_BACKUP" ]; then
+              echo "🔄 Restoring from backup: $LATEST_BACKUP"
+              sudo rm -rf $DEPLOY_DIR/*
+              sudo tar -xzf $LATEST_BACKUP -C $DEPLOY_DIR/
+              sudo chown -R www-data:www-data $DEPLOY_DIR
+              echo "✅ Backup restored"
+            fi
+            
+            exit 1
+          fi
           
           # Reload nginx
           echo "🔄 Reloading nginx..."
           sudo systemctl reload nginx
           
-          # Cleanup
-          rm -f /tmp/deploy.tar.gz
+          # Wait and check nginx status
+          sleep 2
+          if ! sudo systemctl is-active --quiet nginx; then
+            echo "❌ Nginx is not running properly"
+            sudo systemctl status nginx --no-pager -l
+            exit 1
+          fi
           
-          # Final test
-          echo "🧪 Testing website..."
-          sleep 3
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost -H "Host: batas.bpskotabatu.com" || echo "000")
+          # Cleanup temporary files
+          echo "🧹 Cleaning up temporary files..."
+          rm -rf $TEMP_DIR
+          
+          # Final verification
+          echo "🔍 Final verification..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost -H "Host: batas.bpskotabatu.com" 2>/dev/null || echo "000")
           
           if [ "$HTTP_STATUS" = "200" ]; then
-            echo "✅ Deployment successful!"
-            echo "🌐 Website: http://batas.bpskotabatu.com"
+            echo "✅ Deployment completed successfully!"
+            echo "🌐 Website is available at: http://batas.bpskotabatu.com"
+            echo "📅 Deployment time: $(date)"
           else
-            echo "⚠️ Website returned status: $HTTP_STATUS"
+            echo "⚠️ Deployment completed but website returned HTTP $HTTP_STATUS"
+            echo "🔍 Checking nginx error logs:"
+            sudo tail -5 /var/log/nginx/error.log 2>/dev/null || echo "No error logs available"
           fi
+          
+          echo "🎉 Deployment process completed!"
           
     - name: 🧪 Final Website Test
       run: |
-        echo "🧪 Testing deployed website..."
-        sleep 10
+        echo "🧪 Testing deployed website from external..."
+        sleep 15
         
-        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://batas.bpskotabatu.com || echo "000")
+        # Test HTTP response
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://batas.bpskotabatu.com 2>/dev/null || echo "000")
         echo "HTTP Status: $HTTP_STATUS"
         
         if [ "$HTTP_STATUS" = "200" ]; then
-          echo "✅ Website is accessible"
+          echo "✅ Website is accessible from external"
           
           # Test content
-          CONTENT=$(curl -s http://batas.bpskotabatu.com | head -10)
+          CONTENT=$(curl -s http://batas.bpskotabatu.com 2>/dev/null | head -10)
           if echo "$CONTENT" | grep -q "<!DOCTYPE html>" ; then
             echo "✅ HTML content verified"
+            
+            # Check for React app indicators
+            if echo "$CONTENT" | grep -qi "react\|tourism\|analytics\|batu" ; then
+              echo "✅ React app content detected"
+            else
+              echo "⚠️ React app content not clearly detected"
+            fi
           else
             echo "⚠️ HTML content verification failed"
+            echo "Response preview:"
+            echo "$CONTENT"
           fi
         else
           echo "❌ Website test failed with status: $HTTP_STATUS"
+          echo "This might be a temporary issue. Please check manually: http://batas.bpskotabatu.com"
         fi
+        
+        # Test HTTPS (if available)
+        HTTPS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://batas.bpskotabatu.com 2>/dev/null || echo "000")
+        if [ "$HTTPS_STATUS" = "200" ]; then
+          echo "✅ HTTPS is also working: https://batas.bpskotabatu.com"
+        else
+          echo "ℹ️ HTTPS Status: $HTTPS_STATUS (may not be configured yet)"
+        fi
+        
+        echo "🎉 Deployment testing completed!"
