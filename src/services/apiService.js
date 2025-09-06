@@ -193,30 +193,38 @@ class ApiService {
   }
 
   // Authentication methods
-  async login(email, password) {
-    try {
-      const response = await this.api.post('/auth/login', {
-        email,
-        password
-      });
+// Authentication methods
+async login(email, password) {
+  try {
+    const response = await this.api.post('/auth/login', {
+      email,
+      password
+    });
+    
+    if (response.success && response.user) {
+      // Store user info
+      localStorage.setItem('user', JSON.stringify(response.user));
       
-      if (response.success && response.user) {
-        // Store user info
-        localStorage.setItem('user', JSON.stringify(response.user));
-        if (response.token) {
-          localStorage.setItem('auth_token', response.token);
-        }
+      // Store token if provided
+      if (response.token) {
+        localStorage.setItem('auth_token', response.token);
       }
       
-      return response;
-    } catch (error) {
-      console.error('Login error:', error);
-      return {
-        success: false,
-        error: error.message || 'Login failed'
-      };
+      // Update auth service
+      if (window.authService) {
+        window.authService.currentUser = response.user;
+      }
     }
+    
+    return response;
+  } catch (error) {
+    console.error('Login error:', error);
+    return {
+      success: false,
+      error: error.message || 'Login failed'
+    };
   }
+}
 
   async logout() {
     try {
