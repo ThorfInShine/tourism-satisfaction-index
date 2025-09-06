@@ -129,91 +129,92 @@ const HomePage = () => {
 
 // Hero Section Component - DESKTOP LAYOUT PRESERVED
 const HeroSection = ({ tourismImage, scrollToContent, isMobile }) => {
-  // Mobile Layout - FIXED
+  // Mobile Layout - COMPLETELY REDESIGNED
   if (isMobile) {
     return (
-      <section className="min-h-screen relative overflow-hidden flex flex-col justify-center px-4 py-20">
-        <div className="relative z-10 w-full">
-          <div className="flex flex-col items-center text-center space-y-5">
-            {/* Badge */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-md rounded-full text-white text-xs"
-            >
-              <Sparkles className="w-3 h-3 mr-2" />
+      <section className="min-h-screen relative overflow-hidden flex flex-col justify-between py-8 px-5">
+        <div className="flex-1 flex flex-col justify-center items-center text-center">
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="mb-6"
+          >
+            <div className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-md rounded-full text-white text-xs">
+              <Sparkles className="w-3 h-3 mr-1.5" />
               <span>Powered by AI & ML</span>
-            </motion.div>
+            </div>
+          </motion.div>
 
-            {/* Title - FIXED */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="w-full px-2"
-            >
-              <h1 className="text-3xl font-extrabold text-white leading-tight">
-                Data Bicara:
-              </h1>
-              <p className="text-lg text-white/90 font-medium mt-2 px-4">
-                Bagaimana Tingkat Kepuasan di Kota Batu?
-              </p>
-            </motion.div>
+          {/* Title Section - FIXED LAYOUT */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="mb-6 w-full"
+          >
+            <h1 className="text-4xl font-extrabold text-white mb-3">
+              Data Bicara:
+            </h1>
+            <p className="text-xl font-semibold text-white/95 leading-relaxed">
+              Bagaimana Tingkat Kepuasan
+              <br />
+              di Kota Batu?
+            </p>
+          </motion.div>
 
-            {/* Description - IMPROVED */}
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.6 }}
-              className="text-white/90 text-sm leading-relaxed px-6 max-w-sm"
-            >
-              Platform canggih untuk menganalisis kepuasan wisatawan menggunakan 
-              Machine Learning dan Natural Language Processing.
-            </motion.p>
+          {/* Description - IMPROVED */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="text-white/90 text-sm leading-relaxed mb-8 max-w-xs mx-auto"
+          >
+            Platform canggih untuk menganalisis kepuasan wisatawan menggunakan Machine Learning dan Natural Language Processing.
+          </motion.p>
 
-            {/* Image - OPTIMIZED SIZE */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6, duration: 0.6 }}
-              className="relative w-full max-w-xs px-4"
-            >
-              <motion.img 
-                src={tourismImage}
-                alt="Travel Illustration" 
-                className="w-full h-auto"
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                style={{ filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3))' }}
-              />
-            </motion.div>
+          {/* Image - OPTIMIZED */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="mb-8 w-full max-w-[280px]"
+          >
+            <motion.img 
+              src={tourismImage}
+              alt="Travel Illustration" 
+              className="w-full h-auto"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              style={{ filter: 'drop-shadow(0 20px 40px rgba(0, 0, 0, 0.3))' }}
+            />
+          </motion.div>
 
-            {/* CTA Buttons - IMPROVED SPACING */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.6 }}
-              className="flex flex-col w-full px-6 space-y-3 pt-4"
+          {/* CTA Buttons - REDESIGNED */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.6 }}
+            className="w-full max-w-[320px] space-y-3"
+          >
+            <Link
+              to="/dashboard"
+              className="w-full flex items-center justify-center px-6 py-4 bg-gradient-to-r from-orange-500 to-yellow-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 text-base"
             >
-              <Link
-                to="/dashboard"
-                className="w-full flex items-center justify-center px-6 py-3.5 bg-gradient-to-r from-orange-500 to-yellow-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
-                <BarChart3 className="w-5 h-5 mr-2" />
-                Mulai Analisis
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Link>
-              
-              <button
-                onClick={scrollToContent}
-                className="w-full flex items-center justify-center px-6 py-3.5 bg-white/20 backdrop-blur-md text-white font-medium rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300"
-              >
-                Lihat Fitur Lengkap
-                <ChevronDown className="w-5 h-5 ml-2" />
-              </button>
-            </motion.div>
-          </div>
+              <BarChart3 className="w-5 h-5 mr-2" />
+              Mulai Analisis
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Link>
+            
+            <button
+              onClick={scrollToContent}
+              className="w-full flex items-center justify-center px-6 py-4 bg-white/20 backdrop-blur-md text-white font-semibold rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 text-base"
+            >
+              Lihat Fitur Lengkap
+              <ChevronDown className="w-5 h-5 ml-2" />
+            </button>
+          </motion.div>
         </div>
 
         {/* Scroll Indicator - Mobile */}
@@ -221,13 +222,13 @@ const HeroSection = ({ tourismImage, scrollToContent, isMobile }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.5, duration: 0.8 }}
-          className="absolute bottom-4 left-1/2 transform -translate-x-1/2"
+          className="flex justify-center mt-4"
           onClick={scrollToContent}
         >
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="w-5 h-8 border-2 border-white/50 rounded-full flex justify-center"
+            className="w-5 h-8 border-2 border-white/50 rounded-full flex justify-center cursor-pointer"
           >
             <motion.div
               animate={{ y: [0, 10, 0] }}
@@ -375,7 +376,7 @@ const FeaturesSection = ({ features, showContent, isMobile }) => {
         animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="px-4">
+        <div className="px-5">
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
@@ -385,7 +386,7 @@ const FeaturesSection = ({ features, showContent, isMobile }) => {
             <h2 className="text-2xl font-bold text-white mb-3">
               Fitur Unggulan
             </h2>
-            <p className="text-white/80 text-sm px-4">
+            <p className="text-white/80 text-sm">
               Teknologi terdepan untuk analisis kepuasan wisatawan
             </p>
           </motion.div>
@@ -530,7 +531,7 @@ const StatsSection = ({ stats, loading, showContent, statsImage, isMobile }) => 
         animate={showContent ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
         transition={{ duration: 0.8, delay: 0.3 }}
       >
-        <div className="px-4">
+        <div className="px-5">
           <motion.div
             className="bg-white/95 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/10"
             initial={{ opacity: 0, y: 50 }}
@@ -698,7 +699,7 @@ const Footer = ({ showContent }) => (
     animate={showContent ? { opacity: 1 } : { opacity: 0 }}
     transition={{ duration: 0.8, delay: 0.5 }}
   >
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
       <div className="text-xs sm:text-lg">
         © 2025 Analisis Kepuasan Wisatawan Kota Batu
       </div>
